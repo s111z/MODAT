@@ -232,6 +232,7 @@ export default {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
 /* 顶部状态栏 */
@@ -290,7 +291,7 @@ export default {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
-  padding-bottom: 140px;
+  padding-bottom: 200px;
 }
 
 .messages-list {
@@ -393,12 +394,14 @@ export default {
   padding: 24px;
   background: linear-gradient(to top, white, rgba(255, 255, 255, 0.95));
   z-index: 20;
+  pointer-events: none;
 }
 
 .input-container {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  pointer-events: auto;
 }
 
 .uploaded-files {
