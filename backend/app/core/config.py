@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     """应用配置"""
     
     # DeepSeek API配置
-    deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
+    deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "sk-c978cfc8da4c455287129de3bf1ba212")
     deepseek_api_base: str = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1")
     deepseek_model: str = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
     
