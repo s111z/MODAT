@@ -294,6 +294,45 @@ async def add_documents(request: VectorDBAddRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/vectordb/qa", response_model=VectorDBResponse)
+async def rag_qa(request: VectorDBSearchRequest):
+    """搜索向量库"""
+    try:
+        state: VectorDBState = {
+            "operation": "search",
+            "filename": "",
+            "content": "",
+            "file_id": "",
+            "source": None,
+            "file_type": None,
+            "chunk_index": 0,
+            "total_chunks": 0,
+            "create_at": None,
+            "category": None,
+            "permissions": 0,
+            "query": request.query,
+            "top_k": 3,
+            "filter_meta": None,
+            "results": [],
+            "success": False,
+            "message": "",
+            "steps": [],
+            "answer": ""
+        }
+        
+        workflow = create_vectordb_workflow()
+        result = workflow.invoke(state)
+        
+        return VectorDBResponse(
+            success=result["success"],
+            message=result["message"],
+            results=result["answer"],
+            steps=result["steps"]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/vectordb/search", response_model=VectorDBResponse)
 async def search_documents(request: VectorDBSearchRequest):
     """搜索向量库"""

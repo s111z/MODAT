@@ -46,7 +46,7 @@ def node_generate_response(state: AgentState) -> Dict[str, Any]:
         # 使用DeepSeek生成回复
         if LLM_AVAILABLE:
             try:
-                system_message = "你是一个专业的问答助手。请根据提供的上下文信息，给出准确、有用的回复。"
+                system_message = "你是一个专业的问答助手。请根据提供的上下文信息，给出准确、有用的回复。回复一定要基于上下文，尽量不要自行拓展"
                 response = deepseek_client.generate_response(
                     prompt=query, 
                     context=context,
