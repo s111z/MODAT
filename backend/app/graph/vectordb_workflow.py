@@ -6,7 +6,8 @@ from .vectordb_nodes import (
     node_search_documents,
     node_update_document,
     node_delete_documents,
-    node_get_all_documents
+    node_get_all_documents,
+    node_generate_response
 )
 
 def route_operation(state: VectorDBState) -> Literal["add", "search", "update", "delete", "get_all"]:
