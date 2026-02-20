@@ -31,3 +31,4 @@ class VectorDBState(TypedDict):
     success: bool  # 操作是否成功
     message: str  # 操作结果消息
     steps: List[str]  # 执行步骤列表（用于日志和UI展示）
+    answer: Optional[str]

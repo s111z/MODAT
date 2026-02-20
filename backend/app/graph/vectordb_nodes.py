@@ -5,55 +5,70 @@ from core.text_splitter import RecursiveCharacterTextSplitter
 from core.parse_doc import extract_text_from_pdf
 import uuid
 
-# def node_add_documents(state: VectorDBState) -> Dict[str, Any]:
-#     """添加文档到向量库
+def node_generate_response(state: AgentState) -> Dict[str, Any]:
+    """调用DeepSeek LLM生成最终响应"""
+    state["steps"].append("正在调用DeepSeek生成回复...")
     
-#     从状态中获取 texts、metadatas 和 ids，调用 VectorDBManager 添加文档
-#     """
-#     state["steps"].append("正在添加文档到向量库...")
-    
-#     try:
-#         texts = state.get("documents", [])[0]
-#         metadatas = state.get("metadatas")
-#         metadatas = {
-#             "file_id": state.get("file_id"),
-#             "source": state.get("source"), 
-#             "file_type": state.get("file_type"), 
-#             "chunk_index": state.get("chunk_index"),
-#             "total_chunks": state.get("total_chunks"),
-#             "created_at": state.get("created_at"),
-#             "category": state.get("category"),
-#             "permissions": state.get("permissions")
-#         }
+    try:
+        search_result = state.get("results", [])
+        # web_results = state.get("web_results", [])
+        # rag_results = state.get("rag_results", [])
+        # ruling_results = state.get("ruling_results", {})
+        query = state.get("query", "")
         
-#         if not texts:
-#             state["success"] = False
-#             state["message"] = "错误：未提供文本内容"
-#             state["steps"].append(state["message"])
-#             return state
+        # 构建上下文信息
+        context_parts = []
+        for item in search_result:
+            context_parts.append(item["content"])
+        # if web_results:
+        #     web_content = "\n".join([
+        #         f"- {r.get('title', '无标题')}: {r.get('content', '')}"
+        #         for r in web_results[:3]  # 最多取3条
+        #     ])
+        #     context_parts.append(f"网络搜索结果:\n{web_content}")
         
-#         # 调用 VectorDBManager 添加文档
-#         result_ids = db_manager.add_texts(
-#             texts=texts,
-#             metadatas=metadatas
-#         )
+        # if rag_results:
+        #     rag_content = "\n".join([
+        #         f"- {r.get('document', '文档')}: {r.get('content', '')}"
+        #         for r in rag_results[:3]  # 最多取3条
+        #     ])
+        #     context_parts.append(f"内部知识库结果:\n{rag_content}")
         
-#         if result_ids:
-#             state["results"] = [{"ids": result_ids}]
-#             state["success"] = True
-#             state["message"] = f"成功添加 {len(result_ids)} 条文档"
-#         else:
-#             state["success"] = False
-#             state["message"] = "添加文档失败，未返回有效ID"
+        # if ruling_results:
+        #     ruling_content = "\n".join(
+        #         [f"- {r}: {ruling_results[r]}"]
+        #         for r in ruling_results
+        #     )
+        #     context_parts.append(f"冲突分析:\n{ruling_content}")
         
-#         state["steps"].append(state["message"])
-#         return state
+        context = "\n\n".join(context_parts) if context_parts else "无额外上下文信息"
         
-#     except Exception as e:
-#         state["success"] = False
-#         state["message"] = f"添加文档失败: {str(e)}"
-#         state["steps"].append(state["message"])
-#         return state
+        # 使用DeepSeek生成回复
+        if LLM_AVAILABLE:
+            try:
+                system_message = "你是一个专业的问答助手。请根据提供的上下文信息，给出准确、有用的回复。"
+                response = deepseek_client.generate_response(
+                    prompt=query, 
+                    context=context,
+                    system_message=system_message
+                )
+                state["answer"] = response
+                state["steps"].append("已使用DeepSeek生成回复")
+            except Exception as e:
+                state["steps"].append(f"DeepSeek调用失败，使用模拟模式: {str(e)}")
+                # 降级到模拟模式
+                response = f"基于{'、'.join([p.split(':')[0] for p in context_parts]) if context_parts else '当前上下文'}，这是系统生成的回复。"
+                state["response"] = response
+        else:
+            # 模拟模式
+            state["steps"].append("DeepSeek未配置，使用模拟模式")
+            response = f"基于{'、'.join([p.split(':')[0] for p in context_parts]) if context_parts else '当前上下文'}，这是系统生成的回复。"
+            state["response"] = response
+        
+        return state
+    except Exception as e:
+        state["steps"].append(f"响应生成失败: {str(e)}")
+        raise
 
 def node_search_documents(state: VectorDBState) -> Dict[str, Any]:
     """搜索向量库
