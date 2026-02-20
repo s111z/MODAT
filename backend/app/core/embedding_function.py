@@ -46,6 +46,7 @@ class VLLMEmbeddingFunction(EmbeddingFunction[Documents]):
     def model(self) -> EmbeddingModel:
         """延迟加载模型"""
         if self._model is None:
+            print("延迟加载模型，model_name:", self.model_name)
             self._model = get_embedding_model(
                 model_name=self.model_name,
                 device=self.device,

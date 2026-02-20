@@ -20,7 +20,7 @@ class EmbeddingModel:
 
     def __init__(
         self,
-        model_name_or_path: str = "Qwen/Qwen3-Embedding-0.6B",
+        model_name: str = "Qwen/Qwen3-Embedding-0.6B",
         device: str = "cuda",
         trust_remote_code: bool = True,
         **kwargs
@@ -36,22 +36,22 @@ class EmbeddingModel:
             trust_remote_code: 是否信任远程代码
             **kwargs: 传递给 vllm.LLM 的其他参数
         """
-        self.model_name = model_name_or_path
+        self.model_name = model_name
         self.device = device
 
         # 检查是否为本地路径
         import os
-        if os.path.exists(model_name_or_path):
-            print(f"🔄 正在从本地路径加载模型: {model_name_or_path}")
+        if os.path.exists(self.model_name):
+            print(f"🔄 正在从本地路径加载模型: {self.model_name}")
         else:
-            print(f"🔄 正在从 HuggingFace 加载模型: {model_name_or_path}")
+            print(f"🔄 正在从 HuggingFace 加载模型: {self.model_name}")
 
         print(f"📍 设备: {device}")
 
         try:
             # 初始化 vllm LLM
             self.model = LLM(
-                model=model_name_or_path,
+                model=self.model_name,
                 task="embed",
                 trust_remote_code=trust_remote_code,
                 **kwargs
