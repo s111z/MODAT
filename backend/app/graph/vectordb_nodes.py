@@ -17,36 +17,12 @@ def node_generate_response(state: VectorDBState) -> Dict[str, Any]:
     
     try:
         search_result = state.get("results", [])
-        # web_results = state.get("web_results", [])
-        # rag_results = state.get("rag_results", [])
-        # ruling_results = state.get("ruling_results", {})
         query = state.get("query", "")
         
         # 构建上下文信息
         context_parts = []
         for item in search_result:
             context_parts.append(item["content"])
-        # if web_results:
-        #     web_content = "\n".join([
-        #         f"- {r.get('title', '无标题')}: {r.get('content', '')}"
-        #         for r in web_results[:3]  # 最多取3条
-        #     ])
-        #     context_parts.append(f"网络搜索结果:\n{web_content}")
-        
-        # if rag_results:
-        #     rag_content = "\n".join([
-        #         f"- {r.get('document', '文档')}: {r.get('content', '')}"
-        #         for r in rag_results[:3]  # 最多取3条
-        #     ])
-        #     context_parts.append(f"内部知识库结果:\n{rag_content}")
-        
-        # if ruling_results:
-        #     ruling_content = "\n".join(
-        #         [f"- {r}: {ruling_results[r]}"]
-        #         for r in ruling_results
-        #     )
-        #     context_parts.append(f"冲突分析:\n{ruling_content}")
-        
         context = "\n\n".join(context_parts) if context_parts else "无额外上下文信息"
         
         # 使用DeepSeek生成回复

@@ -32,6 +32,15 @@ def route_operation(state: VectorDBState) -> Literal["add", "search", "update", 
     else:
         return "search"
 
+def after_search_routing(state: VectorDBState) -> Literal["generate", "end"]:
+    """搜索之后的路由
+    根据搜索结果是否匹配来决定是否生成回答
+    """
+    if state.get("operation") == "qa":
+        return "generate"
+    else:
+        return "end"
+
 def create_vectordb_workflow() -> StateGraph:
     """创建向量库管理工作流
     
@@ -66,8 +75,14 @@ def create_vectordb_workflow() -> StateGraph:
     # 所有节点执行后直接结束
     workflow.add_edge("add",END)
     
-    workflow.add_edge("search", "generate_response")
-    workflow.add_edge("generate_response", END)
+    workflow.add_conditional_edges(
+        "search",                 # 从 search 节点出发
+        after_search_routing,     # 调用上面写的判断函数
+        {
+            "generate": "generate", # 如果函数返回 "generate"，则跳转到 generate 节点
+            "end": END              # 如果函数返回 "end"，则流程直接结束
+        }
+    )
 
     workflow.add_edge("update", END)
     workflow.add_edge("delete", END)

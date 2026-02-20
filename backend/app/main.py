@@ -299,7 +299,7 @@ async def rag_qa(request: VectorDBSearchRequest):
     """搜索向量库"""
     try:
         state: VectorDBState = {
-            "operation": "search",
+            "operation": "qa",
             "filename": "",
             "content": "",
             "file_id": "",
@@ -326,7 +326,9 @@ async def rag_qa(request: VectorDBSearchRequest):
         return VectorDBResponse(
             success=result["success"],
             message=result["message"],
-            results=result["answer"],
+            results=[{
+                "answer": result["answer"]
+            }],
             steps=result["steps"]
         )
     except Exception as e:
