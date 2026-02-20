@@ -34,7 +34,7 @@ class VLLMEmbeddingFunction(EmbeddingFunction[Documents]):
             **kwargs: 传递给模型的其他参数
         """
         base_dir = os.getenv("MODEL_BASE_DIR", "/root/modelparams")
-        self.model_name = os.path.join(base_dir, model_name)
+        self.model_name = os.path.join(base_dir, model_name_or_path)
         self.device = device
         self.task_description = task_description
         self.kwargs = kwargs
