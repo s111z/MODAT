@@ -1,0 +1,6 @@
+.claude
+.comate
+*.tar.xz
+chroma_db
+venv/
+*.md

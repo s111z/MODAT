@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+langgraph
+langchain-openai
+chromadb
+pymupdf
+duckduckgo-search
+python-multipart
+pydantic-settings
+httpx
