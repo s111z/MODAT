@@ -2,7 +2,7 @@ import chromadb
 import uuid
 from typing import List, Dict, Optional, Any
 # from chromadb.utils import embedding_functions
-from embedding_function import VLLMEmbeddingFunction
+from .embedding_function import VLLMEmbeddingFunction
 
 class VectorDBManager:
     def __init__(self, db_path: str = "./chroma_db", collection_name: str = "mota_knowledge"):
