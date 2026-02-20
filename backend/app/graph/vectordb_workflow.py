@@ -54,7 +54,7 @@ def create_vectordb_workflow() -> StateGraph:
     # 添加所有节点
     workflow.add_node("add", node_add_documents)
     workflow.add_node("search", node_search_documents)
-    workflow.add_node("generate_response", node_generate_response)
+    workflow.add_node("generate", node_generate_response)
     workflow.add_node("update", node_update_document)
     workflow.add_node("delete", node_delete_documents)
     workflow.add_node("get_all", node_get_all_documents)
