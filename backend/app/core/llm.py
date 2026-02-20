@@ -1,6 +1,10 @@
 from typing import List, Dict, Any, Optional
 import httpx
+import nest_asyncio
 from .config import settings
+
+# 允许嵌套事件循环
+nest_asyncio.apply()
 
 class DeepSeekClient:
     """DeepSeek API客户端"""
