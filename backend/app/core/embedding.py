@@ -52,7 +52,7 @@ class EmbeddingModel:
             # 初始化 vllm LLM
             self.model = LLM(
                 model=self.model_name,
-                task="embed",
+                runner="pooling",
                 trust_remote_code=trust_remote_code,
                 **kwargs
             )
