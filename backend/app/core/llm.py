@@ -1,10 +1,9 @@
 from typing import List, Dict, Any, Optional
 import httpx
-import nest_asyncio
 from .config import settings
-
-# 允许嵌套事件循环
-nest_asyncio.apply()
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import threading
 
 class DeepSeekClient:
     """DeepSeek API客户端"""
@@ -73,24 +72,24 @@ class DeepSeekClient:
     ) -> str:
         """
         生成回复的同步包装方法
-        
+
         Args:
             prompt: 用户提示
             context: 上下文信息
             system_message: 系统消息
-            
+
         Returns:
             生成的回复文本
         """
         messages = []
-        
+
         # 添加系统消息
         if system_message:
             messages.append({
                 "role": "system",
                 "content": system_message
             })
-        
+
         # 添加上下文
         if context:
             messages.append({
@@ -102,23 +101,26 @@ class DeepSeekClient:
                 "role": "user",
                 "content": prompt
             })
-        
-        # 调用API（这里使用同步方式，实际项目中应该使用异步）
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        result = loop.run_until_complete(
-            self.chat_completion(messages)
-        )
-        
+
+        # 在新线程中运行异步代码，避免事件循环冲突
+        def run_in_thread():
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            try:
+                return new_loop.run_until_complete(
+                    self.chat_completion(messages)
+                )
+            finally:
+                new_loop.close()
+
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(run_in_thread)
+            result = future.result()
+
         # 提取回复内容
         if result and "choices" in result and len(result["choices"]) > 0:
             return result["choices"][0]["message"]["content"]
-        
+
         return "抱歉，无法生成回复"
 
 # 全局DeepSeek客户端实例

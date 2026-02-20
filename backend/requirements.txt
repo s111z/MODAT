@@ -8,4 +8,3 @@ duckduckgo-search
 python-multipart
 pydantic-settings
 httpx
-nest-asyncio
