@@ -5,6 +5,12 @@ from core.text_splitter import RecursiveCharacterTextSplitter
 from core.parse_doc import extract_text_from_pdf
 import uuid
 
+try:
+    from core.llm import deepseek_client
+    LLM_AVAILABLE = True
+except Exception:
+    LLM_AVAILABLE = False
+
 def node_generate_response(state: VectorDBState) -> Dict[str, Any]:
     """调用DeepSeek LLM生成最终响应"""
     state["steps"].append("正在调用DeepSeek生成回复...")
