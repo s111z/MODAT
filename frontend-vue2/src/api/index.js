@@ -1,4 +1,5 @@
 import axios from 'axios'
+import mockService from '@/mock'
 
 const API_BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:5000'
 
@@ -23,6 +24,15 @@ class APIClient {
    * @returns {Promise<Object>} { response: string, steps: string[] }
    */
   async chat(message) {
+    // Mock 模式
+    if (mockService.isEnabled()) {
+      if (message.mode === 'document-review') {
+        return await mockService.sendDocumentReviewMessage(message.message)
+      }
+      return await mockService.sendQAMessage(message.message)
+    }
+
+    // 真实 API
     try {
       const response = await axios.post(`${this.baseUrl}/api/chat`, message)
       return response.data
@@ -39,6 +49,22 @@ class APIClient {
    * @param {Function} onComplete - 完成回调函数
    */
   async chatStream(message, onData, onError, onComplete) {
+    // Mock 模式
+    if (mockService.isEnabled()) {
+      try {
+        await mockService.sendQAMessageStream(
+          message.message,
+          onData,
+          onData
+        )
+        if (onComplete) onComplete()
+      } catch (error) {
+        if (onError) onError(error)
+      }
+      return
+    }
+
+    // 真实 API
     try {
       const response = await fetch(`${this.baseUrl}/api/chat/stream`, {
         method: 'POST',
@@ -109,6 +135,12 @@ class APIClient {
    * @returns {Promise<Object>} { savefilename, size, status, message }
    */
   async uploadFile(file) {
+    // Mock 模式
+    if (mockService.isEnabled()) {
+      return await mockService.uploadFile(file)
+    }
+
+    // 真实 API
     const formData = new FormData()
     formData.append('file', file)
 
@@ -128,9 +160,16 @@ class APIClient {
   /**
    * 上传文件到知识库
    * @param {File} file - 文件对象
+   * @param {Object} metadata - 元数据
    * @returns {Promise<Object>}
    */
-  async uploadKnowledgeFile(file) {
+  async uploadKnowledgeFile(file, metadata = {}) {
+    // Mock 模式
+    if (mockService.isEnabled()) {
+      return await mockService.uploadDocument(file, metadata)
+    }
+
+    // 真实 API
     const formData = new FormData()
     formData.append('file', file)
 
@@ -170,6 +209,12 @@ class APIClient {
    * @returns {Promise<Object>}
    */
   async vectorDBSearch(request) {
+    // Mock 模式
+    if (mockService.isEnabled()) {
+      return await mockService.search(request.query)
+    }
+
+    // 真实 API
     try {
       const response = await axios.post(`${this.baseUrl}/api/vectordb/search`, request)
       return response.data
@@ -200,6 +245,13 @@ class APIClient {
    * @returns {Promise<Object>}
    */
   async vectorDBDelete(request) {
+    // Mock 模式
+    if (mockService.isEnabled()) {
+      const docId = request.ids?.[0] || 'unknown'
+      return await mockService.deleteDocument(docId)
+    }
+
+    // 真实 API
     try {
       const response = await axios.post(`${this.baseUrl}/api/vectordb/delete`, request)
       return response.data

@@ -1,5 +1,5 @@
 <template>
-  <div class="home">
+  <div class="home-single single-layout">
     <!-- 侧边栏 -->
     <div class="sidebar">
       <div class="sidebar-buttons">
@@ -48,36 +48,26 @@
       </div>
     </div>
 
-    <!-- 主内容区 -->
-    <div class="main-content">
-      <!-- 左侧面板：根据侧边栏状态显示不同内容 -->
-      <div class="left-panel">
-        <!-- 聊天模式下根据任务模式显示不同内容 -->
-        <template v-if="sidebarActive === 'chat'">
-          <!-- QA 模式显示 AgentWorkflow（知识问答）或 AgentThinking（普通QA） -->
-          <AgentWorkflow
-            v-if="taskMode === 'qa' && workflowSteps.length > 0"
-            :steps="workflowSteps"
-            ref="agentWorkflow"
-          />
-          <AgentThinking v-else-if="taskMode === 'qa'" />
-          <!-- 文档审核模式显示 DocumentReviewPanel -->
-          <DocumentReviewPanel v-else />
-        </template>
-
-        <!-- 历史列表 -->
-        <HistoryList v-else-if="sidebarActive === 'history'" />
-
-        <!-- 全局搜索 -->
-        <GlobalSearch v-else-if="sidebarActive === 'search'" />
-
-        <!-- 知识库管理 -->
-        <KnowledgeManager v-else-if="sidebarActive === 'knowledge'" />
+    <!-- 主内容区 - 单栏布局 -->
+    <div class="main-content-single">
+      <!-- 聊天模式 -->
+      <div v-if="sidebarActive === 'chat'" class="chat-container">
+        <ChatInterface />
       </div>
 
-      <!-- 右侧面板：始终显示聊天界面 -->
-      <div class="right-panel">
-        <ChatInterface />
+      <!-- 历史列表 -->
+      <div v-else-if="sidebarActive === 'history'" class="panel-container">
+        <HistoryList />
+      </div>
+
+      <!-- 全局搜索 -->
+      <div v-else-if="sidebarActive === 'search'" class="panel-container">
+        <GlobalSearch />
+      </div>
+
+      <!-- 知识库管理 -->
+      <div v-else-if="sidebarActive === 'knowledge'" class="panel-container">
+        <KnowledgeManager />
       </div>
     </div>
   </div>
@@ -86,49 +76,38 @@
 <script>
 import { mapState, mapMutations } from 'vuex'
 import ChatInterface from '@/components/ChatInterface.vue'
-import AgentThinking from '@/components/AgentThinking.vue'
-import AgentWorkflow from '@/components/AgentWorkflow.vue'
-import DocumentReviewPanel from '@/components/DocumentReviewPanel.vue'
 import HistoryList from '@/components/HistoryList.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
 import KnowledgeManager from '@/components/KnowledgeManager.vue'
 
 export default {
-  name: 'Home',
+  name: 'HomeSingle',
   components: {
     ChatInterface,
-    AgentThinking,
-    AgentWorkflow,
-    DocumentReviewPanel,
     HistoryList,
     GlobalSearch,
     KnowledgeManager
   },
-  data() {
-    return {
-      workflowSteps: []
-    }
-  },
   computed: {
-    ...mapState(['sidebarActive', 'taskMode', 'reviewPhase'])
+    ...mapState(['sidebarActive', 'taskMode'])
   },
   methods: {
-    ...mapMutations(['SET_SIDEBAR_ACTIVE']),
+    ...mapMutations(['SET_SIDEBAR_ACTIVE', 'SET_LAYOUT_MODE']),
 
     setSidebar(panel) {
       this.SET_SIDEBAR_ACTIVE(panel)
     }
   },
   mounted() {
-    console.log('Home component mounted successfully')
-    console.log('Current mode:', this.taskMode)
-    console.log('Current sidebar:', this.sidebarActive)
+    // 设置为单栏模式
+    this.SET_LAYOUT_MODE('single')
+    console.log('HomeSingle component mounted - Single column layout')
   }
 }
 </script>
 
 <style scoped>
-.home {
+.home-single {
   display: flex;
   height: 100vh;
   background: linear-gradient(to bottom right, #eff6ff, #e0e7ff);
@@ -176,40 +155,27 @@ export default {
   height: 100%;
 }
 
-/* 主内容区 */
-.main-content {
-  display: flex;
+/* 主内容区 - 单栏 */
+.main-content-single {
   flex: 1;
   height: 100vh;
   overflow: hidden;
+  display: flex;
 }
 
-/* 左侧面板 */
-.left-panel {
-  width: 45%;
+.chat-container {
+  flex: 1;
   height: 100vh;
-  border-right: 1px solid #e5e7eb;
+  display: flex;
+  width: 100%;
+}
+
+.panel-container {
+  flex: 1;
+  height: 100vh;
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(8px);
   overflow-y: auto;
-  transition: all 0.3s;
-}
-
-/* 右侧面板 */
-.right-panel {
-  width: 55%;
-  height: 100vh;
-  transition: all 0.3s;
-}
-
-/* 响应式布局 */
-@media (max-width: 1024px) {
-  .left-panel {
-    display: none;
-  }
-
-  .right-panel {
-    width: 100%;
-  }
+  width: 100%;
 }
 </style>

@@ -28,7 +28,14 @@
           <!-- 助手消息 -->
           <div v-else class="message assistant-message">
             <div class="message-bubble assistant-bubble">
-              <p class="message-text">{{ message.content }}</p>
+              <!-- 工作流展示（如果有） -->
+              <AgentWorkflowInline
+                v-if="message.workflow && message.workflow.length > 0"
+                :steps="message.workflow"
+                class="message-workflow"
+              />
+              <!-- 消息内容 -->
+              <p v-if="message.content" class="message-text">{{ message.content }}</p>
             </div>
           </div>
         </div>
@@ -87,7 +94,8 @@
           ></el-button>
 
           <el-input
-            v-model="input"
+            :value="input"
+            @input="SET_INPUT($event)"
             placeholder="输入您的问题，或上传文档进行分析..."
             :disabled="isLoading"
             @keyup.enter.native="handleSend"
@@ -113,9 +121,14 @@
 <script>
 import { mapState, mapMutations, mapActions } from 'vuex'
 import api from '@/api'
+import mockService from '@/mock'
+import AgentWorkflowInline from './AgentWorkflowInline.vue'
 
 export default {
   name: 'ChatInterface',
+  components: {
+    AgentWorkflowInline
+  },
   data() {
     return {
       uploadedFiles: [],
@@ -167,6 +180,7 @@ export default {
 
       const query = this.input
       const fileNames = this.uploadedFiles.map(f => f.name)
+      const taskMode = this.$store.state.taskMode
 
       // 添加用户消息
       this.ADD_MESSAGE({
@@ -180,10 +194,19 @@ export default {
       this.SET_LOADING(true)
 
       try {
-        // 尝试使用流式API
-        await this.sendMessageStream({ message: query })
+        // 判断是否为文档审核模式
+        if (taskMode === 'document-review' && mockService.isEnabled()) {
+          // 触发文档审核流程
+          await this.triggerDocumentReview(query)
+        } else if (mockService.isEnabled() && taskMode === 'qa') {
+          // 知识问答模式 - 使用Mock
+          await this.triggerKnowledgeQA(query)
+        } else {
+          // 真实API调用 - 尝试使用流式API
+          await this.sendMessageStream({ message: query })
+        }
       } catch (error) {
-        console.error('流式API失败，降级到普通API:', error)
+        console.error('API失败:', error)
 
         try {
           // 降级到普通API
@@ -202,28 +225,226 @@ export default {
       // 清空上传的文件
       this.uploadedFiles = []
       this.serverFilename = ''
+    },
+
+    // 触发知识问答流程
+    async triggerKnowledgeQA(message) {
+      // 获取 Home 组件实例
+      const homeInstance = this.getHomeInstance()
+
+      // 判断是否使用内联模式（单栏）还是侧边栏模式（双栏）
+      const useInlineMode = this.$store.state.layoutMode === 'single' || !homeInstance
+
+      let assistantMessageContent = ''
+      let workflowSteps = []
+      const assistantMessageId = (Date.now() + 1).toString()
+
+      // 添加空的助手消息，用于后续追加
+      this.ADD_MESSAGE({
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        workflow: useInlineMode ? [] : undefined // 只在内联模式下添加workflow字段
+      })
+
+      try {
+        await mockService.sendKnowledgeQAMessage(
+          message,
+          // 工作流更新回调
+          (steps) => {
+            workflowSteps = steps
+
+            if (useInlineMode) {
+              // 内联模式：更新消息中的workflow
+              const lastMessage = this.$store.state.chat.messages[this.$store.state.chat.messages.length - 1]
+              if (lastMessage && lastMessage.id === assistantMessageId) {
+                lastMessage.workflow = [...steps]
+              }
+            } else {
+              // 侧边栏模式：更新Home组件的workflowSteps
+              if (homeInstance) {
+                homeInstance.workflowSteps = steps
+              }
+            }
+          },
+          // 流式输出回调
+          (chunk) => {
+            assistantMessageContent = chunk
+            // 更新最后一条消息
+            const lastMessage = this.$store.state.chat.messages[this.$store.state.chat.messages.length - 1]
+            if (lastMessage && lastMessage.id === assistantMessageId) {
+              lastMessage.content = assistantMessageContent
+            }
+          }
+        )
+      } catch (error) {
+        console.error('知识问答失败:', error)
+        this.ADD_MESSAGE({
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: '知识问答过程中发生错误: ' + error.message
+        })
+      } finally {
+        this.SET_LOADING(false)
+      }
+    },
+
+    // 触发文档审核流程
+    async triggerDocumentReview(message) {
+      // 获取 DocumentReviewPanel 组件实例
+      const reviewPanel = this.getReviewPanelInstance()
+      const useInlineMode = this.$store.state.layoutMode === 'single' || !reviewPanel
+
+      if (!reviewPanel && !useInlineMode) {
+        console.error('无法找到 DocumentReviewPanel 组件')
+        this.SET_LOADING(false)
+        return
+      }
+
+      let assistantMessageContent = ''
+      const assistantMessageId = (Date.now() + 1).toString()
+
+      // 添加空的助手消息，用于后续追加
+      this.ADD_MESSAGE({
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        workflow: useInlineMode ? [] : undefined // 单栏模式下添加workflow字段
+      })
+
+      try {
+        await mockService.sendDocumentReviewMessageWithWorkflow(
+          message,
+          // 阶段变化回调
+          (phase) => {
+            if (reviewPanel) {
+              reviewPanel.switchPhase(phase)
+            }
+            this.$store.commit('SET_REVIEW_PHASE', phase)
+          },
+          // 步骤更新回调
+          (update) => {
+            if (update.phase === 'document') {
+              if (reviewPanel) {
+                if (update.content) {
+                  reviewPanel.updateDocumentContent(update.content)
+                }
+                if (update.scanning) {
+                  reviewPanel.startScanning()
+                }
+              }
+            } else if (update.phase === 'workflow') {
+              // 双栏模式：更新侧边栏
+              if (reviewPanel) {
+                // 初始化工作流程（首次）
+                if (update.step && !reviewPanel.workflowSteps.length) {
+                  const conversation = mockService.getNextDocumentReviewConversation()
+                  if (conversation && conversation.reviewData) {
+                    reviewPanel.initWorkflow(conversation.reviewData.workflow.steps)
+                  }
+                }
+
+                // 更新步骤状态
+                if (typeof update.stepIndex !== 'undefined') {
+                  reviewPanel.updateWorkflowStep(update.stepIndex, {
+                    status: update.status,
+                    progress: update.progress,
+                    ...(update.progressItem && { progressItem: update.progressItem })
+                  })
+                }
+              }
+
+              // 单栏模式：更新消息中的workflow
+              if (useInlineMode && update.workflowSteps) {
+                const lastMessage = this.$store.state.chat.messages[this.$store.state.chat.messages.length - 1]
+                if (lastMessage && lastMessage.id === assistantMessageId) {
+                  lastMessage.workflow = [...update.workflowSteps]
+                }
+              }
+            } else if (update.phase === 'result') {
+              if (reviewPanel && update.report) {
+                reviewPanel.updateFinalReport(update.report)
+              }
+            }
+          },
+          // 响应回调（流式输出）
+          (chunk) => {
+            assistantMessageContent += chunk
+            // 更新最后一条消息
+            const lastMessage = this.$store.state.chat.messages[this.$store.state.chat.messages.length - 1]
+            if (lastMessage && lastMessage.id === assistantMessageId) {
+              lastMessage.content = assistantMessageContent
+            }
+          }
+        )
+      } catch (error) {
+        console.error('文档审核失败:', error)
+        this.ADD_MESSAGE({
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: '文档审核过程中发生错误: ' + error.message
+        })
+      } finally {
+        this.SET_LOADING(false)
+      }
+    },
+
+    // 获取 DocumentReviewPanel 组件实例
+    getReviewPanelInstance() {
+      // 通过 parent 向上查找
+      let parent = this.$parent
+      while (parent) {
+        if (parent.$children) {
+          const reviewPanel = parent.$children.find(child =>
+            child.$options.name === 'DocumentReviewPanel'
+          )
+          if (reviewPanel) {
+            return reviewPanel
+          }
+        }
+        parent = parent.$parent
+      }
+
+      // 通过 root 查找所有组件
+      const findInChildren = (children) => {
+        for (const child of children) {
+          if (child.$options.name === 'DocumentReviewPanel') {
+            return child
+          }
+          if (child.$children && child.$children.length > 0) {
+            const found = findInChildren(child.$children)
+            if (found) return found
+          }
+        }
+        return null
+      }
+
+      return findInChildren(this.$root.$children)
+    },
+
+    // 获取 Home 组件实例
+    getHomeInstance() {
+      // 通过 parent 向上查找
+      let parent = this.$parent
+      while (parent) {
+        if (parent.$options.name === 'Home') {
+          return parent
+        }
+        parent = parent.$parent
+      }
+      return null
     }
   },
   mounted() {
-    // 添加 Mock 数据用于演示
-    this.ADD_MESSAGE({
-      id: 'mock-1',
-      role: 'user',
-      content: '请帮我分析一下深度学习模型优化的最佳实践',
-      files: []
-    })
-
-    this.ADD_MESSAGE({
-      id: 'mock-2',
-      role: 'assistant',
-      content: '根据我的分析和搜索结果，深度学习模型优化的最佳实践包括以下几个方面：\n\n1. **学习率调整**：使用学习率衰减策略，如余弦退火或步进衰减\n2. **批量大小优化**：根据GPU内存选择合适的batch size\n3. **正则化技术**：应用Dropout、L2正则化等防止过拟合\n4. **数据增强**：通过数据增强提高模型泛化能力\n5. **模型架构**：选择合适的网络结构，考虑使用预训练模型\n\n这些建议综合了网络搜索结果和内部知识库的最佳实践。'
-    })
+    // Mock 数据已准备好，等待用户手动触发
+    // 不再自动加载示例对话
   }
 }
 </script>
 
 <style scoped>
 .chat-interface {
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -289,15 +510,19 @@ export default {
 /* 对话区域 */
 .messages-container {
   flex: 1;
+  width: 100%;
   overflow-y: auto;
   padding: 24px;
   padding-bottom: 200px;
+  box-sizing: border-box;
 }
 
 .messages-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-width: 100%;
+  width: 100%;
 }
 
 .message-item {
@@ -321,14 +546,24 @@ export default {
 
 .user-message {
   justify-content: flex-end;
+  width: 100%;
+}
+
+.user-message .message-bubble {
+  max-width: 70%;
 }
 
 .assistant-message {
   justify-content: flex-start;
+  width: 100%;
+}
+
+.assistant-message .message-bubble {
+  width: 100%;
+  max-width: 100%;
 }
 
 .message-bubble {
-  max-width: 85%;
   padding: 12px 16px;
   border-radius: 8px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -350,6 +585,10 @@ export default {
   white-space: pre-wrap;
   line-height: 1.6;
   margin: 0;
+}
+
+.message-workflow {
+  margin-bottom: 12px;
 }
 
 .message-files {
@@ -391,17 +630,19 @@ export default {
   bottom: 0;
   left: 0;
   right: 0;
+  width: 100%;
   padding: 24px;
   background: linear-gradient(to top, white, rgba(255, 255, 255, 0.95));
   z-index: 20;
-  pointer-events: none;
+  box-sizing: border-box;
 }
 
 .input-container {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  pointer-events: auto;
+  width: 100%;
+  max-width: 100%;
 }
 
 .uploaded-files {
@@ -441,6 +682,7 @@ export default {
 }
 
 .input-wrapper {
+  width: 100%;
   height: 56px;
   background: white;
   border: 1px solid #d1d5db;
@@ -450,6 +692,7 @@ export default {
   padding: 0 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: border-color 0.3s;
+  box-sizing: border-box;
 }
 
 .input-wrapper:hover {

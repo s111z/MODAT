@@ -56,6 +56,7 @@
 
 <script>
 import dayjs from 'dayjs'
+import mockService from '@/mock'
 
 export default {
   name: 'GlobalSearch',
@@ -64,28 +65,11 @@ export default {
       searchQuery: '',
       isSearching: false,
       searchResults: [],
-      mockResults: [
-        {
-          id: '1',
-          sessionId: 'session-1',
-          sessionTitle: '深度学习模型优化',
-          matchedContent: '学习率调整是模型优化的重要环节',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30),
-          context: '讨论 #1'
-        },
-        {
-          id: '2',
-          sessionId: 'session-2',
-          sessionTitle: 'Python 数据分析',
-          matchedContent: '使用 pandas 进行数据清洗，学习率设置为 0.001',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-          context: '讨论 #2'
-        }
-      ]
+      recentSearches: []
     }
   },
   methods: {
-    handleSearch() {
+    async handleSearch() {
       if (this.searchQuery.length < 2) {
         this.searchResults = []
         return
@@ -93,15 +77,31 @@ export default {
 
       this.isSearching = true
 
-      // 模拟搜索延迟
-      setTimeout(() => {
-        const query = this.searchQuery.toLowerCase()
-        this.searchResults = this.mockResults.filter(result =>
-          result.matchedContent.toLowerCase().includes(query) ||
-          result.sessionTitle.toLowerCase().includes(query)
-        )
+      try {
+        if (mockService.isEnabled()) {
+          // 模拟搜索延迟
+          await new Promise(resolve => setTimeout(resolve, 300))
+
+          const results = await mockService.search(this.searchQuery)
+          this.searchResults = results.map(result => ({
+            id: result.id,
+            sessionId: result.id,
+            sessionTitle: result.title,
+            matchedContent: result.excerpt,
+            timestamp: new Date(result.date),
+            context: `${result.type} | ${result.source}`
+          }))
+        } else {
+          // 真实 API 调用
+          // TODO: 实现真实搜索API
+          this.searchResults = []
+        }
+      } catch (error) {
+        console.error('搜索失败:', error)
+        this.searchResults = []
+      } finally {
         this.isSearching = false
-      }, 300)
+      }
     },
 
     highlightMatch(content) {
@@ -112,7 +112,17 @@ export default {
 
     formatTime(timestamp) {
       return dayjs(timestamp).format('YYYY-MM-DD HH:mm')
+    },
+
+    loadRecentSearches() {
+      if (mockService.isEnabled()) {
+        const searchData = mockService.getGlobalSearchData()
+        this.recentSearches = searchData.recentSearches || []
+      }
     }
+  },
+  mounted() {
+    this.loadRecentSearches()
   }
 }
 </script>

@@ -1,0 +1,534 @@
+{
+  "enabled": true,
+  "mode": "mock",
+  "scenarios": {
+    "qa": {
+      "conversations": [
+        {
+          "id": "qa-1",
+          "userMessage": "请帮我分析一下深度学习模型优化的最佳实践",
+          "assistantMessage": "根据我的分析和搜索结果，深度学习模型优化的最佳实践包括以下几个方面：\n\n1. **学习率调整**：使用学习率衰减策略，如余弦退火或步进衰减\n2. **批量大小优化**：根据GPU内存选择合适的batch size\n3. **正则化技术**：应用Dropout、L2正则化等防止过拟合\n4. **数据增强**：通过数据增强提高模型泛化能力\n5. **模型架构**：选择合适的网络结构，考虑使用预训练模型\n\n这些建议综合了网络搜索结果和内部知识库的最佳实践。",
+          "agentSteps": [
+            {
+              "id": "step-1",
+              "type": "thinking",
+              "content": "正在理解用户问题：如何实现深度学习模型的优化？",
+              "timestamp": 1708428000000
+            },
+            {
+              "id": "step-2",
+              "type": "searching",
+              "content": "正在使用DuckDuckGo搜索最新的优化技术...",
+              "timestamp": 1708428001000
+            },
+            {
+              "id": "step-3",
+              "type": "parsing",
+              "content": "正在解析文档中的相关章节...",
+              "timestamp": 1708428002000
+            },
+            {
+              "id": "step-4",
+              "type": "resolving",
+              "content": "正在对比网络资源与内部知识库的差异...",
+              "timestamp": 1708428003000
+            },
+            {
+              "id": "step-5",
+              "type": "generating",
+              "content": "正在使用DeepSeek生成综合性回复...",
+              "timestamp": 1708428004000
+            }
+          ]
+        },
+        {
+          "id": "qa-2",
+          "userMessage": "什么是Transformer架构的核心原理？",
+          "assistantMessage": "Transformer架构的核心原理基于自注意力机制（Self-Attention），主要包括：\n\n1. **自注意力机制**：允许模型在处理序列时关注序列中的不同位置\n2. **多头注意力**：使用多个注意力头并行处理，捕获不同的特征表示\n3. **位置编码**：为序列添加位置信息，弥补模型本身无法感知顺序的问题\n4. **前馈神经网络**：在每个注意力层后添加全连接层\n5. **残差连接和层归一化**：提高训练稳定性和收敛速度\n\n这种架构在NLP任务中取得了显著效果，并成为现代大语言模型的基础。",
+          "agentSteps": [
+            {
+              "id": "step-1",
+              "type": "thinking",
+              "content": "分析用户问题：关于Transformer架构原理",
+              "timestamp": 1708428100000
+            },
+            {
+              "id": "step-2",
+              "type": "searching",
+              "content": "检索内部知识库中关于Transformer的文档...",
+              "timestamp": 1708428101000
+            },
+            {
+              "id": "step-3",
+              "type": "parsing",
+              "content": "提取关键技术点和核心概念...",
+              "timestamp": 1708428102000
+            },
+            {
+              "id": "step-4",
+              "type": "generating",
+              "content": "生成结构化的技术解释...",
+              "timestamp": 1708428103000
+            }
+          ]
+        }
+      ]
+    },
+    "documentReview": {
+      "conversations": [
+        {
+          "id": "review-1",
+          "userMessage": "请审核这份合规文档",
+          "fileName": "compliance_policy_v2.pdf",
+          "assistantMessage": "我已经完成了对该合规文档的全面审核。以下是详细的审核报告：\n\n**符合项 (85%)**\n- ✅ 数据保护条款完整\n- ✅ 隐私政策符合GDPR要求\n- ✅ 安全措施描述清晰\n\n**需改进项 (15%)**\n- ⚠️ 第3章缺少具体的事故响应流程\n- ⚠️ 第5章的数据保留期限需要明确\n- ⚠️ 附录B的联系信息需要更新\n\n**建议**\n建议优先处理事故响应流程的补充，这是合规审查中的关键项。",
+          "agentSteps": [
+            {
+              "id": "step-1",
+              "type": "parsing",
+              "content": "正在解析PDF文档结构...",
+              "timestamp": 1708428200000
+            },
+            {
+              "id": "step-2",
+              "type": "thinking",
+              "content": "正在识别文档类型和审核维度...",
+              "timestamp": 1708428201000
+            },
+            {
+              "id": "step-3",
+              "type": "searching",
+              "content": "正在检索相关合规标准和最佳实践...",
+              "timestamp": 1708428202000
+            },
+            {
+              "id": "step-4",
+              "type": "resolving",
+              "content": "正在对比文档内容与合规要求...",
+              "timestamp": 1708428203000
+            },
+            {
+              "id": "step-5",
+              "type": "generating",
+              "content": "正在生成详细的审核报告...",
+              "timestamp": 1708428204000
+            },
+            {
+              "id": "step-6",
+              "type": "noting",
+              "content": "已记录审核过程和发现，生成报告中",
+              "timestamp": 1708428205000
+            }
+          ],
+          "reviewData": {
+            "documentContent": "第一章 总则\n\n第一条 为规范公司数据处理活动，保护个人信息权益，根据《中华人民共和国个人信息保护法》《中华人民共和国数据安全法》等法律法规，制定本政策...\n\n第二章 数据收集\n\n第二条 公司仅收集为提供服务所必需的个人信息...\n\n第三章 数据保护\n\n第三条 公司采取加密存储、访问控制等安全措施...",
+            "workflow": {
+              "steps": [
+                {
+                  "id": "doc-analysis",
+                  "name": "文档分析",
+                  "status": "done",
+                  "icon": "✅",
+                  "details": null
+                },
+                {
+                  "id": "schema-extraction",
+                  "name": "Schema提取",
+                  "status": "pending",
+                  "icon": "📋",
+                  "details": {
+                    "fields": [
+                      {
+                        "name": "文档类型",
+                        "value": "合规政策文档",
+                        "confidence": 0.95
+                      },
+                      {
+                        "name": "适用标准",
+                        "value": "GDPR, 个人信息保护法",
+                        "confidence": 0.92
+                      },
+                      {
+                        "name": "关键条款数量",
+                        "value": "23条",
+                        "confidence": 1.0
+                      },
+                      {
+                        "name": "风险等级",
+                        "value": "中等",
+                        "confidence": 0.88
+                      },
+                      {
+                        "name": "适用范围",
+                        "value": "全公司员工及数据处理活动",
+                        "confidence": 0.90
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "query-construction",
+                  "name": "查询构造",
+                  "status": "pending",
+                  "icon": "🔨",
+                  "details": {
+                    "queries": [
+                      "GDPR第17条数据删除权的具体要求",
+                      "个人信息保护法第51条安全事故响应流程",
+                      "数据保留期限的行业最佳实践",
+                      "合规政策文档必备条款清单",
+                      "数据处理活动的透明度要求"
+                    ]
+                  }
+                },
+                {
+                  "id": "knowledge-retrieval",
+                  "name": "知识库检索",
+                  "status": "pending",
+                  "icon": "📚",
+                  "details": {
+                    "results": [
+                      {
+                        "title": "GDPR合规指南 v3.2",
+                        "relevance": 0.94,
+                        "excerpt": "第17条规定，数据主体有权要求数据控制者删除其个人数据..."
+                      },
+                      {
+                        "title": "个人信息保护法实施细则",
+                        "relevance": 0.89,
+                        "excerpt": "发生个人信息安全事故时，应当立即采取补救措施..."
+                      },
+                      {
+                        "title": "数据保护最佳实践2024",
+                        "relevance": 0.85,
+                        "excerpt": "建议数据保留期限不超过业务需求必要期限的120%..."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "web-retrieval",
+                  "name": "网络检索",
+                  "status": "pending",
+                  "icon": "🌐",
+                  "details": {
+                    "results": [
+                      {
+                        "source": "欧盟GDPR官方网站",
+                        "relevance": 0.96,
+                        "excerpt": "Article 17 - Right to erasure ('right to be forgotten')..."
+                      },
+                      {
+                        "source": "网信办政策解读",
+                        "relevance": 0.91,
+                        "excerpt": "个人信息安全事故应急响应指南..."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "multi-source-pk",
+                  "name": "多路PK",
+                  "status": "pending",
+                  "icon": "⚖️",
+                  "details": {
+                    "analysis": [
+                      {
+                        "topic": "数据删除权",
+                        "knowledgeBase": "要求30天内完成删除",
+                        "webSource": "GDPR要求'without undue delay'，通常解释为1个月内",
+                        "conclusion": "建议采用30天标准，符合GDPR和国内法规要求",
+                        "confidence": 0.93
+                      },
+                      {
+                        "topic": "事故响应时间",
+                        "knowledgeBase": "建议72小时内通知",
+                        "webSource": "GDPR明确要求72小时内通知监管机构",
+                        "conclusion": "必须在72小时内通知，这是法定要求",
+                        "confidence": 0.98
+                      },
+                      {
+                        "topic": "数据保留期限",
+                        "knowledgeBase": "建议不超过业务需求的120%",
+                        "webSource": "最小化原则，仅保留必要期限",
+                        "conclusion": "需要明确具体期限，当前文档描述模糊",
+                        "confidence": 0.88
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "report-generation",
+                  "name": "报告生成",
+                  "status": "pending",
+                  "icon": "📄",
+                  "details": {
+                    "sections": [
+                      "执行摘要",
+                      "合规性评分",
+                      "符合项列表",
+                      "不符合项及建议",
+                      "风险评估",
+                      "改进建议"
+                    ]
+                  }
+                },
+                {
+                  "id": "response-generation",
+                  "name": "回复生成",
+                  "status": "pending",
+                  "icon": "💬",
+                  "details": {
+                    "outline": [
+                      "开场总结",
+                      "主要发现",
+                      "关键问题",
+                      "优先级建议",
+                      "下一步行动"
+                    ]
+                  }
+                }
+              ]
+            },
+            "finalReport": {
+              "complianceScore": 85,
+              "summary": "该文档整体符合GDPR和个人信息保护法的基本要求，但存在一些需要改进的地方。",
+              "compliantItems": [
+                {
+                  "title": "数据保护条款完整",
+                  "description": "第三章详细描述了加密、访问控制等安全措施",
+                  "reference": "第三章第三条"
+                },
+                {
+                  "title": "隐私政策符合GDPR要求",
+                  "description": "明确了数据收集目的和使用范围",
+                  "reference": "第二章第二条"
+                },
+                {
+                  "title": "数据主体权利说明清晰",
+                  "description": "列出了访问、更正、删除等权利",
+                  "reference": "第四章"
+                }
+              ],
+              "issues": [
+                {
+                  "severity": "high",
+                  "title": "缺少事故响应流程",
+                  "location": "第三章",
+                  "description": "未找到明确的72小时安全事故响应流程",
+                  "suggestion": "建议添加详细的事故响应流程，包括72小时通知要求、应急联系人、处置步骤等",
+                  "priority": 1
+                },
+                {
+                  "severity": "medium",
+                  "title": "数据保留期限不明确",
+                  "location": "第五章",
+                  "description": "数据保留期限描述为'业务需要期间'，过于模糊",
+                  "suggestion": "建议明确各类数据的具体保留期限，如用户数据2年、日志数据6个月等",
+                  "priority": 2
+                },
+                {
+                  "severity": "low",
+                  "title": "联系信息需更新",
+                  "location": "附录B",
+                  "description": "部分联系方式可能已过期",
+                  "suggestion": "建议定期审查和更新联系信息，建议每季度检查一次",
+                  "priority": 3
+                }
+              ],
+              "recommendations": [
+                "优先完善事故响应流程，这是GDPR的强制要求",
+                "明确数据保留期限，建议按数据类型分类管理",
+                "建立定期审查机制，每半年更新一次政策文档",
+                "增加员工培训章节，确保政策得到有效执行"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "history": [
+    {
+      "id": "session-1",
+      "title": "深度学习模型优化讨论",
+      "date": "2024-02-20",
+      "time": "14:30",
+      "preview": "讨论了深度学习模型的各种优化技术...",
+      "messageCount": 8
+    },
+    {
+      "id": "session-2",
+      "title": "Transformer架构解析",
+      "date": "2024-02-20",
+      "time": "10:15",
+      "preview": "分析了Transformer的核心原理和应用...",
+      "messageCount": 5
+    },
+    {
+      "id": "session-3",
+      "title": "合规文档审核 - Q1季度",
+      "date": "2024-02-19",
+      "time": "16:45",
+      "preview": "审核了Q1季度的合规政策文档...",
+      "messageCount": 12
+    },
+    {
+      "id": "session-4",
+      "title": "数据隐私政策咨询",
+      "date": "2024-02-19",
+      "time": "09:20",
+      "preview": "关于GDPR合规的数据隐私政策问题...",
+      "messageCount": 6
+    },
+    {
+      "id": "session-5",
+      "title": "模型性能评估",
+      "date": "2024-02-18",
+      "time": "15:00",
+      "preview": "讨论了模型性能评估的各项指标...",
+      "messageCount": 10
+    }
+  ],
+  "globalSearch": {
+    "recentSearches": [
+      "GDPR合规要求",
+      "深度学习优化",
+      "Transformer架构",
+      "数据保护条例"
+    ],
+    "searchResults": [
+      {
+        "id": "result-1",
+        "title": "GDPR合规指南",
+        "type": "document",
+        "source": "内部知识库",
+        "excerpt": "关于GDPR（通用数据保护条例）的完整合规指南，包括数据收集、处理、存储和删除的最佳实践...",
+        "date": "2024-01-15",
+        "relevance": 95
+      },
+      {
+        "id": "result-2",
+        "title": "深度学习模型优化技术",
+        "type": "article",
+        "source": "技术博客",
+        "excerpt": "介绍了各种深度学习模型优化技术，包括量化、剪枝、知识蒸馏等方法...",
+        "date": "2024-02-10",
+        "relevance": 92
+      },
+      {
+        "id": "result-3",
+        "title": "Attention机制详解",
+        "type": "paper",
+        "source": "学术论文",
+        "excerpt": "详细解释了注意力机制的工作原理和在NLP任务中的应用...",
+        "date": "2023-12-20",
+        "relevance": 88
+      },
+      {
+        "id": "result-4",
+        "title": "数据隐私保护实施方案",
+        "type": "document",
+        "source": "内部知识库",
+        "excerpt": "企业级数据隐私保护的完整实施方案，涵盖技术措施和管理流程...",
+        "date": "2024-01-28",
+        "relevance": 85
+      }
+    ]
+  },
+  "knowledge": {
+    "categories": [
+      {
+        "id": "cat-1",
+        "name": "合规政策",
+        "icon": "📋",
+        "documentCount": 23,
+        "lastUpdated": "2024-02-20"
+      },
+      {
+        "id": "cat-2",
+        "name": "技术文档",
+        "icon": "💻",
+        "documentCount": 45,
+        "lastUpdated": "2024-02-19"
+      },
+      {
+        "id": "cat-3",
+        "name": "最佳实践",
+        "icon": "⭐",
+        "documentCount": 18,
+        "lastUpdated": "2024-02-18"
+      },
+      {
+        "id": "cat-4",
+        "name": "培训材料",
+        "icon": "📚",
+        "documentCount": 12,
+        "lastUpdated": "2024-02-15"
+      }
+    ],
+    "documents": [
+      {
+        "id": "doc-1",
+        "title": "GDPR合规指南 v3.2",
+        "category": "合规政策",
+        "size": "3.5 MB",
+        "format": "PDF",
+        "uploadDate": "2024-02-15",
+        "uploadBy": "张三",
+        "status": "已审核",
+        "tags": ["GDPR", "合规", "数据保护"]
+      },
+      {
+        "id": "doc-2",
+        "title": "深度学习模型开发指南",
+        "category": "技术文档",
+        "size": "5.2 MB",
+        "format": "PDF",
+        "uploadDate": "2024-02-10",
+        "uploadBy": "李四",
+        "status": "已审核",
+        "tags": ["深度学习", "AI", "开发"]
+      },
+      {
+        "id": "doc-3",
+        "title": "代码审查最佳实践",
+        "category": "最佳实践",
+        "size": "1.8 MB",
+        "format": "DOCX",
+        "uploadDate": "2024-02-08",
+        "uploadBy": "王五",
+        "status": "待审核",
+        "tags": ["代码审查", "质量保证"]
+      },
+      {
+        "id": "doc-4",
+        "title": "安全培训课程 Q1 2024",
+        "category": "培训材料",
+        "size": "12.3 MB",
+        "format": "PPTX",
+        "uploadDate": "2024-02-05",
+        "uploadBy": "赵六",
+        "status": "已审核",
+        "tags": ["安全", "培训", "Q1"]
+      },
+      {
+        "id": "doc-5",
+        "title": "API设计规范 v2.0",
+        "category": "技术文档",
+        "size": "2.1 MB",
+        "format": "PDF",
+        "uploadDate": "2024-02-01",
+        "uploadBy": "张三",
+        "status": "已审核",
+        "tags": ["API", "设计", "规范"]
+      }
+    ],
+    "statistics": {
+      "totalDocuments": 98,
+      "totalSize": "245.6 MB",
+      "categoriesCount": 4,
+      "recentUploads": 15,
+      "pendingReview": 8
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '@/views/Home.vue'
+import HomeSingle from '@/views/HomeSingle.vue'
 
 Vue.use(VueRouter)
 
@@ -9,6 +10,11 @@ const routes = [
     path: '/',
     name: 'Home',
     component: Home
+  },
+  {
+    path: '/single',
+    name: 'HomeSingle',
+    component: HomeSingle
   }
   // 可扩展路由：
   // {

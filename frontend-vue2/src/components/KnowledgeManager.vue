@@ -154,6 +154,7 @@
 
 <script>
 import { mapState, mapActions } from 'vuex'
+import mockService from '@/mock'
 
 export default {
   name: 'KnowledgeManager',
@@ -178,10 +179,38 @@ export default {
     ...mapActions('knowledge', ['fetchDocuments', 'searchDocuments', 'deleteDocument']),
 
     async loadDocuments() {
-      try {
-        await this.fetchDocuments(50)
-      } catch (error) {
-        this.$message.error('加载文档列表失败: ' + error.message)
+      if (mockService.isEnabled()) {
+        // 从 Mock 服务加载文档
+        try {
+          const knowledgeData = mockService.getKnowledgeData()
+          // 转换文档格式
+          const mockDocuments = knowledgeData.documents.map(doc => ({
+            id: doc.id,
+            content: `${doc.title} - ${doc.category}`,
+            metadata: {
+              source: doc.title,
+              category: doc.category,
+              file_type: doc.format,
+              size: doc.size,
+              uploadBy: doc.uploadBy,
+              uploadDate: doc.uploadDate,
+              status: doc.status,
+              tags: doc.tags.join(', ')
+            }
+          }))
+
+          this.$store.commit('knowledge/SET_DOCUMENTS', mockDocuments)
+          this.$store.commit('knowledge/SET_LOADING', false)
+        } catch (error) {
+          this.$message.error('加载文档列表失败: ' + error.message)
+        }
+      } else {
+        // 真实 API
+        try {
+          await this.fetchDocuments(50)
+        } catch (error) {
+          this.$message.error('加载文档列表失败: ' + error.message)
+        }
       }
     },
 
@@ -195,23 +224,46 @@ export default {
       this.processingSteps = []
 
       try {
-        // 步骤1: 上传文件
-        this.processingSteps.push('正在上传文件...')
-        const uploadResponse = await this.$store.dispatch('knowledge/uploadAndAddDocument', {
-          file,
-          metadatas: {
-            category: 'law',
-            permissions: 0
+        if (mockService.isEnabled()) {
+          // Mock 模式
+          this.processingSteps.push('正在上传文件...')
+          await new Promise(resolve => setTimeout(resolve, 500))
+
+          this.processingSteps.push('正在解析文档结构...')
+          await new Promise(resolve => setTimeout(resolve, 500))
+
+          this.processingSteps.push('正在添加到知识库...')
+          const result = await mockService.uploadDocument(file, {
+            category: '技术文档',
+            tags: ['新上传']
+          })
+
+          this.uploadStatus = {
+            type: 'success',
+            message: '文件已成功添加到知识库（Mock）'
           }
-        })
 
-        this.uploadStatus = {
-          type: 'success',
-          message: `${uploadResponse.message} - 文件已成功添加到知识库`
-        }
+          // 刷新列表
+          await this.loadDocuments()
+        } else {
+          // 真实 API
+          this.processingSteps.push('正在上传文件...')
+          const uploadResponse = await this.$store.dispatch('knowledge/uploadAndAddDocument', {
+            file,
+            metadatas: {
+              category: 'law',
+              permissions: 0
+            }
+          })
 
-        if (uploadResponse.steps && uploadResponse.steps.length > 0) {
-          this.processingSteps.push(...uploadResponse.steps)
+          this.uploadStatus = {
+            type: 'success',
+            message: `${uploadResponse.message} - 文件已成功添加到知识库`
+          }
+
+          if (uploadResponse.steps && uploadResponse.steps.length > 0) {
+            this.processingSteps.push(...uploadResponse.steps)
+          }
         }
       } catch (error) {
         this.uploadStatus = {
@@ -233,11 +285,38 @@ export default {
         return
       }
 
-      try {
-        await this.searchDocuments(this.searchQuery)
-        this.$message.success(`找到 ${this.searchResults.length} 个相关结果`)
-      } catch (error) {
-        this.$message.error('搜索失败: ' + error.message)
+      if (mockService.isEnabled()) {
+        // Mock 搜索
+        try {
+          this.$store.commit('knowledge/SET_SEARCHING', true)
+          const results = await mockService.search(this.searchQuery)
+
+          // 转换搜索结果
+          const searchResults = results.map(result => ({
+            id: result.id,
+            content: result.excerpt,
+            metadata: {
+              source: result.title,
+              category: result.type,
+              relevance: result.relevance
+            }
+          }))
+
+          this.$store.commit('knowledge/SET_SEARCH_RESULTS', searchResults)
+          this.$store.commit('knowledge/SET_SEARCHING', false)
+          this.$message.success(`找到 ${searchResults.length} 个相关结果`)
+        } catch (error) {
+          this.$store.commit('knowledge/SET_SEARCHING', false)
+          this.$message.error('搜索失败: ' + error.message)
+        }
+      } else {
+        // 真实 API
+        try {
+          await this.searchDocuments(this.searchQuery)
+          this.$message.success(`找到 ${this.searchResults.length} 个相关结果`)
+        } catch (error) {
+          this.$message.error('搜索失败: ' + error.message)
+        }
       }
     },
 
@@ -249,8 +328,17 @@ export default {
           type: 'warning'
         })
 
-        await this.deleteDocument(docId)
-        this.$message.success('删除成功')
+        if (mockService.isEnabled()) {
+          // Mock 删除
+          await mockService.deleteDocument(docId)
+          this.$message.success('删除成功（Mock）')
+          // 刷新列表
+          await this.loadDocuments()
+        } else {
+          // 真实 API
+          await this.deleteDocument(docId)
+          this.$message.success('删除成功')
+        }
       } catch (error) {
         if (error !== 'cancel') {
           this.$message.error('删除失败: ' + error.message)

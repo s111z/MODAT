@@ -10,7 +10,8 @@ export default new Vuex.Store({
   state: {
     sidebarActive: 'chat', // 'chat' | 'history' | 'search' | 'knowledge'
     taskMode: 'qa',        // 'qa' | 'document-review'
-    reviewPhase: 'document' // 'document' | 'workflow' | 'result'
+    reviewPhase: 'document', // 'document' | 'workflow' | 'result'
+    layoutMode: 'double'   // 'single' | 'double' - 单栏或双栏布局
   },
   mutations: {
     SET_SIDEBAR_ACTIVE(state, value) {
@@ -21,6 +22,9 @@ export default new Vuex.Store({
     },
     SET_REVIEW_PHASE(state, phase) {
       state.reviewPhase = phase
+    },
+    SET_LAYOUT_MODE(state, mode) {
+      state.layoutMode = mode
     }
   },
   actions: {
@@ -32,6 +36,9 @@ export default new Vuex.Store({
     },
     setReviewPhase({ commit }, phase) {
       commit('SET_REVIEW_PHASE', phase)
+    },
+    setLayoutMode({ commit }, mode) {
+      commit('SET_LAYOUT_MODE', mode)
     }
   },
   modules: {

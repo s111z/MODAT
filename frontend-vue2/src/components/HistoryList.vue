@@ -36,6 +36,7 @@
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
+import mockService from '@/mock'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
@@ -45,29 +46,7 @@ export default {
   data() {
     return {
       searchQuery: '',
-      sessions: [
-        {
-          id: '1',
-          title: '深度学习模型优化讨论',
-          preview: '讨论了学习率调整、批量大小优化等最佳实践...',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30),
-          messageCount: 8
-        },
-        {
-          id: '2',
-          title: '劳动合同法咨询',
-          preview: '关于劳动合同解除的法律问题...',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-          messageCount: 12
-        },
-        {
-          id: '3',
-          title: 'Python 数据分析',
-          preview: '使用 pandas 进行数据清洗和分析...',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-          messageCount: 15
-        }
-      ]
+      sessions: []
     }
   },
   computed: {
@@ -83,13 +62,35 @@ export default {
     }
   },
   methods: {
-    formatTime(timestamp) {
-      return dayjs(timestamp).fromNow()
+    formatTime(dateString) {
+      // 如果是日期字符串，解析为相对时间
+      const date = new Date(dateString)
+      return dayjs(date).fromNow()
     },
     handleSessionClick(session) {
       this.$message.info(`加载会话: ${session.title}`)
       // TODO: 实现会话加载逻辑
+    },
+    loadSessions() {
+      if (mockService.isEnabled()) {
+        // 从 Mock 服务加载历史会话
+        const mockHistory = mockService.getHistory()
+        this.sessions = mockHistory.map(item => ({
+          id: item.id,
+          title: item.title,
+          preview: item.preview,
+          timestamp: `${item.date} ${item.time}`,
+          messageCount: item.messageCount
+        }))
+      } else {
+        // 真实 API 调用
+        // TODO: 实现真实 API
+        this.sessions = []
+      }
     }
+  },
+  mounted() {
+    this.loadSessions()
   }
 }
 </script>
