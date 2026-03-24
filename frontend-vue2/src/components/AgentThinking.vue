@@ -29,8 +29,8 @@
     </div>
 
     <div v-else class="empty-state">
-      <i class="el-icon-loading"></i>
-      <p>等待 AI 代理开始分析...</p>
+      <img src="@/assets/images/wait.svg" class="wait-icon" alt="waiting" />
+      <p>等待用户输入...</p>
     </div>
   </div>
 </template>
@@ -95,7 +95,7 @@ export default {
   display: flex;
   flex-direction: column;
   padding: 20px;
-  background: white;
+  background: transition;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
 }

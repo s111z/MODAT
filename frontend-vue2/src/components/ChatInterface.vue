@@ -1,52 +1,53 @@
 <template>
   <div class="chat-interface">
-    <!-- 顶部状态栏 -->
-    <div class="status-bar">
-      <div class="status-indicator">
-        <div :class="['status-dot', { 'loading': isLoading }]"></div>
+    <div class="right-header">
+      <div class="agent-info">
+        <div class="agent-avatar"></div>
+        <div class="agent-text">
+          <div class="agent-name">Compliance Copilot</div>
+          <div class="agent-status">Ready</div>
+        </div>
       </div>
-      <div class="status-info">
-        <div class="status-title">Compliance Copilot</div>
-        <div class="status-text">{{ isLoading ? 'Processing...' : 'Ready' }}</div>
+      
+      <div class="header-logo">
+        <span class="logo-text">mota</span>
+        <img src="@/assets/images/logo.png" alt="Mota" class="logo-icon" />
       </div>
     </div>
-
-    <!-- 对话区域 -->
+    
     <div class="messages-container">
       <div class="messages-list">
         <div v-for="message in messages" :key="message.id" class="message-item">
-          <!-- 用户消息 -->
           <div v-if="message.role === 'user'" class="message user-message">
             <div class="message-bubble user-bubble">
               <p class="message-text">{{ message.content }}</p>
-              <div v-if="message.files && message.files.length > 0" class="message-files">
-                📎 {{ message.files.join(', ') }}
-              </div>
             </div>
           </div>
 
-          <!-- 助手消息 -->
           <div v-else class="message assistant-message">
             <div class="message-bubble assistant-bubble">
-              <!-- 工作流展示（如果有） -->
               <AgentWorkflowInline
                 v-if="message.workflow && message.workflow.length > 0"
                 :steps="message.workflow"
                 class="message-workflow"
               />
-              <!-- 消息内容 -->
-              <p v-if="message.content" class="message-text">{{ message.content }}</p>
+              <div 
+                v-if="message.content" 
+                class="message-text markdown-body" 
+                v-html="renderMarkdown(message.content)"
+              ></div>
             </div>
           </div>
         </div>
 
-        <!-- 加载指示器 -->
         <div v-if="isLoading" class="message assistant-message">
-          <div class="message-bubble assistant-bubble">
-            <div class="loading-dots">
-              <div class="dot" style="animation-delay: 0ms"></div>
-              <div class="dot" style="animation-delay: 150ms"></div>
-              <div class="dot" style="animation-delay: 300ms"></div>
+          <div class="message-bubble assistant-bubble loading-bubble">
+            <div class="loading-container">
+              <div class="dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
               <span class="loading-text">正在思考...</span>
             </div>
           </div>
@@ -54,66 +55,45 @@
       </div>
     </div>
 
-    <!-- 底部输入区域 -->
     <div class="input-area">
-      <div class="input-container">
-        <!-- 已上传文件 -->
-        <div v-if="uploadedFiles.length > 0" class="uploaded-files">
-          <div
-            v-for="(file, index) in uploadedFiles"
-            :key="index"
-            class="file-tag"
-          >
-            <span class="file-name">{{ file.name }}</span>
-            <el-button
-              type="text"
-              icon="el-icon-close"
-              size="mini"
-              @click="removeFile(index)"
-              class="remove-btn"
-            ></el-button>
-          </div>
+      <div v-if="uploadedFiles.length > 0" class="file-preview-list">
+        <div v-for="(file, index) in uploadedFiles" :key="index" class="file-item">
+          <i class="el-icon-document"></i>
+          <span class="file-name">{{ file.name }}</span>
+          <i class="el-icon-close remove-icon" @click="removeFile(index)"></i>
         </div>
-
-        <!-- 输入框 -->
-        <div class="input-wrapper">
-          <input
-            ref="fileInput"
-            type="file"
-            style="display: none"
-            accept=".pdf,.doc,.docx,.txt"
-            @change="handleFileSelect"
-          />
-          <el-button
-            icon="el-icon-paperclip"
-            circle
-            size="small"
-            @click="$refs.fileInput.click()"
-            :disabled="isLoading"
-            class="attach-btn"
-          ></el-button>
-
-          <el-input
-            :value="input"
-            @input="SET_INPUT($event)"
-            placeholder="输入您的问题，或上传文档进行分析..."
-            :disabled="isLoading"
-            @keyup.enter.native="handleSend"
-            class="message-input"
-          ></el-input>
-
-          <el-button
-            type="primary"
-            icon="el-icon-s-promotion"
-            circle
-            @click="handleSend"
-            :disabled="isLoading || !input.trim()"
-            class="send-btn"
-          ></el-button>
-        </div>
-
-        <p class="input-hint">💡 支持上传PDF、Word、TXT文档进行智能分析</p>
       </div>
+      <div class="input-wrapper">
+        <el-button
+          icon="el-icon-paperclip"
+          type="text"
+          class="attach-btn"
+          @click="$refs.fileInput.click()"
+        ></el-button>
+        <input
+          ref="fileInput"
+          type="file"
+          style="display: none"
+          accept=".pdf,.doc,.docx,.txt"
+          @change="handleFileSelect"
+        />
+        <el-input
+          :value="input"
+          @input="SET_INPUT($event)"
+          placeholder="输入您的问题，或上传文档进行分析..."
+          @keyup.enter.native="handleSend"
+          class="message-input"
+        ></el-input>
+        <el-button
+          type="primary"
+          icon="el-icon-s-promotion"
+          circle
+          @click="handleSend"
+          :disabled="!input.trim()"
+          class="send-btn"
+        ></el-button>
+      </div>
+      <p class="input-hint">💡 支持上传PDF、Word、TXT文档进行智能分析</p>
     </div>
   </div>
 </template>
@@ -123,6 +103,9 @@ import { mapState, mapMutations, mapActions } from 'vuex'
 import api from '@/api'
 import mockService from '@/mock'
 import AgentWorkflowInline from './AgentWorkflowInline.vue'
+
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 export default {
   name: 'ChatInterface',
@@ -433,6 +416,15 @@ export default {
         parent = parent.$parent
       }
       return null
+    },
+
+    //markdown解析
+    renderMarkdown(content) {
+      if (!content) return ''
+      // 解析 Markdown 为 HTML
+      const rawHtml = marked(content)
+      // 净化 HTML 防止 XSS 攻击
+      return DOMPurify.sanitize(rawHtml)
     }
   },
   mounted() {
@@ -448,88 +440,233 @@ export default {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  position: relative;
+  background: transparent; /* 透出父容器背景图 */
 }
 
-/* 顶部状态栏 */
-.status-bar {
+/* 顶部 Header */
+.right-header {
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.agent-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f9fafb;
-  z-index: 10;
+  gap: 10px;
 }
 
-.status-indicator {
-  width: 32px;
-  height: 32px;
+.agent-avatar {
+  width: 24px;
+  height: 24px;
+  background: #a5b4fc;
   border-radius: 50%;
-  background: linear-gradient(135deg, #e0f2fe 0%, #c7d2fe 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #d1d5db;
+  border: 1px solid white;
 }
 
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #9ca3af;
-}
-
-.status-dot.loading {
-  background: #3b82f6;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.status-title {
-  font-weight: 600;
+.agent-name {
   font-size: 14px;
-  color: #111827;
+  font-weight: 600;
+  color: #333;
 }
 
-.status-text {
+.agent-status {
   font-size: 12px;
-  color: #6b7280;
-  font-family: 'Monaco', 'Courier New', monospace;
+  color: #999;
 }
 
-/* 对话区域 */
+.logo-text {
+  font-size: 24px;
+  font-weight: 900; /* 图1是非常粗的黑体 */
+  color: #000;
+  font-family: 'Inter', sans-serif;
+}
+
+.logo-icon {
+  width: 28px;
+}
+
+/* 消息容器 */
 .messages-container {
   flex: 1;
-  width: 100%;
+  padding: 30px;
   overflow-y: auto;
-  padding: 24px;
-  padding-bottom: 200px;
-  box-sizing: border-box;
 }
 
 .messages-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 100%;
+  gap: 20px;
+}
+
+.message {
+  display: flex;
   width: 100%;
 }
 
-.message-item {
-  animation: fadeIn 0.5s ease-in-out;
+.user-message {
+  justify-content: flex-end;
 }
 
-@keyframes fadeIn {
+/* 用户气泡：高亮橙色 */
+.user-bubble {
+  background-color: #f2994a !important;
+  color: white !important;
+  padding: 10px 20px;
+  border-radius: 15px 15px 4px 15px; /* 对齐图1的非对称圆角 */
+  font-size: 14px;
+  box-shadow: 0 4px 10px rgba(242, 153, 74, 0.2);
+}
+
+/* 助手气泡：超大奶油色面板 */
+.assistant-bubble {
+  background-color: #fcf3e8 !important; /* 图1的标准奶粉色 */
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%; /* 助手回复通常占据横向大部分空间 */
+  color: #333;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.03);
+}
+
+.loading-bubble {
+  width: fit-content; /* “正在思考”状态气泡较小 */
+  padding: 12px 20px;
+}
+
+/* 正在思考动画 */
+.loading-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dots {
+  display: flex;
+  gap: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: #3b82f6;
+  border-radius: 50%;
+  animation: loadingDot 1.4s infinite ease-in-out;
+}
+
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes loadingDot {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #888;
+}
+
+/* 底部输入框 */
+.input-area {
+  padding: 20px 30px 40px;
+  background: transparent;
+}
+
+.input-wrapper {
+  background: #fff;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  padding: 4px 6px 4px 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eee;
+}
+
+.message-input >>> .el-input__inner {
+  border: none !important;
+  background: transparent !important;
+}
+
+.attach-btn {
+  font-size: 20px;
+  color: #999;
+}
+
+.send-btn {
+  background-color: #f2994a !important;
+  border-color: #f2994a !important;
+  width: 40px;
+  height: 40px;
+}
+
+.input-hint {
+  text-align: center;
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 10px;
+}
+
+/* Markdown 字体适配图1 */
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.8;
+  color: #444;
+}
+
+/* 文件预览区域样式 */
+.file-preview-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(5px);
+  border-radius: 12px;
+  margin-bottom: 8px; /* 与输入框保持距离 */
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.03); /* 向上微弱阴影 */
+  max-height: 120px;
+  overflow-y: auto;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #f2994a; /* 匹配你主题的橙色边框 */
+  font-size: 13px;
+  color: #333;
+  animation: slideInUp 0.3s ease;
+}
+
+.file-name {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-icon {
+  cursor: pointer;
+  color: #999;
+  transition: color 0.2s;
+}
+
+.remove-icon:hover {
+  color: #f56c6c;
+}
+
+/* 入场动画 */
+@keyframes slideInUp {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -540,212 +677,15 @@ export default {
   }
 }
 
-.message {
-  display: flex;
-}
-
-.user-message {
-  justify-content: flex-end;
-  width: 100%;
-}
-
-.user-message .message-bubble {
-  max-width: 70%;
-}
-
-.assistant-message {
-  justify-content: flex-start;
-  width: 100%;
-}
-
-.assistant-message .message-bubble {
-  width: 100%;
-  max-width: 100%;
-}
-
-.message-bubble {
-  padding: 12px 16px;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.user-bubble {
-  background: #3b82f6;
-  color: white;
-}
-
-.assistant-bubble {
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  color: #111827;
-}
-
-.message-text {
-  font-size: 14px;
-  white-space: pre-wrap;
-  line-height: 1.6;
-  margin: 0;
-}
-
-.message-workflow {
-  margin-bottom: 12px;
-}
-
-.message-files {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
-  font-size: 12px;
-}
-
-/* 加载动画 */
-.loading-dots {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  background: #3b82f6;
-  border-radius: 50%;
-  animation: bounce 1s ease-in-out infinite;
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-.loading-text {
-  font-size: 14px;
-  color: #6b7280;
-  margin-left: 8px;
-}
-
-/* 底部输入区域 */
+/* 适配输入框布局 */
 .input-area {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  padding: 24px;
-  background: linear-gradient(to top, white, rgba(255, 255, 255, 0.95));
-  z-index: 20;
-  box-sizing: border-box;
-}
-
-.input-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  max-width: 100%;
-}
-
-.uploaded-files {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.file-tag {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: white;
-  border: 1px solid #d1d5db;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  color: #374151;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.file-name {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.remove-btn {
-  padding: 0;
-  min-width: auto;
-  color: #9ca3af;
-}
-
-.remove-btn:hover {
-  color: #ef4444;
+  align-items: flex-start; /* 预览从左侧对齐 */
 }
 
 .input-wrapper {
-  width: 100%;
-  height: 56px;
-  background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 28px;
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: border-color 0.3s;
-  box-sizing: border-box;
+  width: 100%; /* 确保输入条撑满 */
 }
 
-.input-wrapper:hover {
-  border-color: #9ca3af;
-}
-
-.attach-btn {
-  color: #6b7280;
-  margin-right: 4px;
-}
-
-.message-input {
-  flex: 1;
-}
-
-.message-input >>> .el-input__inner {
-  border: none;
-  background: transparent;
-  color: #111827;
-  padding: 0 12px;
-}
-
-.message-input >>> .el-input__inner:focus {
-  box-shadow: none;
-}
-
-.message-input >>> .el-input__inner::placeholder {
-  color: #9ca3af;
-}
-
-.send-btn {
-  width: 44px;
-  height: 44px;
-  background: #3b82f6;
-  border: none;
-  transition: all 0.3s;
-}
-
-.send-btn:hover {
-  background: #2563eb;
-  transform: scale(1.05);
-}
-
-.send-btn:disabled {
-  opacity: 0.5;
-  transform: scale(1);
-}
-
-.input-hint {
-  font-size: 12px;
-  color: #6b7280;
-  text-align: center;
-  margin: 0;
-  padding: 0 16px;
-}
 </style>

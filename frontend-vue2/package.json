@@ -14,7 +14,9 @@
   "dependencies": {
     "axios": "^1.6.0",
     "dayjs": "^1.11.10",
+    "dompurify": "^3.3.1",
     "element-ui": "^2.15.14",
+    "marked": "^17.0.3",
     "vue": "^2.7.16",
     "vue-router": "^3.6.5",
     "vue-template-compiler": "^2.7.16",

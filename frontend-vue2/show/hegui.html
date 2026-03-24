@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>合规审查SERVER样式</title>
+<style>
+    /* 基础重置和字体设置 */
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: #f5f6f7; /* 模拟页面浅色背景 */
+        display: flex;
+        justify-content: center;
+        padding: 40px 20px;
+    }
+
+    /* 外层主容器 */
+    .container {
+        width: 100%;
+        max-width: 600px;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    /* 顶部标题栏 */
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid #f0f0f0;
+        font-weight: 600;
+        color: #333333;
+        font-size: 15px;
+    }
+    .header-icon {
+        width: 16px;
+        height: 16px;
+        fill: #999;
+    }
+
+    /* 内部卡片区域 */
+    .card-wrapper {
+        padding: 16px 20px 24px;
+    }
+    
+    /* 橙色边框卡片 */
+    .orange-card {
+        border: 2px solid #eeb67a;
+        border-radius: 6px;
+        padding: 20px 16px;
+        background-color: #ffffff;
+    }
+
+    /* 卡片标题 (人力资源公司) */
+    .card-title {
+        display: flex;
+        align-items: center;
+        color: #df7a28;
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 16px;
+    }
+    .card-title svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+        margin-right: 8px;
+    }
+
+    /* 灰色信息框 */
+    .gray-box {
+        background-color: #f9f9f9;
+        border-radius: 4px;
+        padding: 12px 16px;
+        margin-bottom: 12px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+    }
+    .gray-box .label {
+        color: #666666;
+        margin-right: 16px;
+    }
+    .gray-box .value {
+        color: #333333;
+        font-weight: bold;
+    }
+
+    /* 粉色边框核查项区域 */
+    .pink-box {
+        border: 1px solid #f2c7c9;
+        border-radius: 4px;
+        padding: 16px;
+        margin-top: 16px;
+        margin-bottom: 16px;
+    }
+    .pink-box-title {
+        color: #666666;
+        font-size: 14px;
+        margin-bottom: 12px;
+    }
+    
+    /* 骨架屏占位条 (灰色) */
+    .skeleton-bar-gray {
+        background-color: #f9f9f9;
+        height: 24px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+    }
+    .skeleton-bar-gray:last-child {
+        margin-bottom: 0;
+    }
+
+    /* 米色底占位区域 */
+    .beige-box {
+        background-color: #fdf6ea;
+        height: 48px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+    }
+    .beige-box:last-child {
+        margin-bottom: 0;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <span>合规审查SERVER</span>
+        <svg class="header-icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+            <path d="M831.872 312.32l-319.488 319.488-319.488-319.488-75.776 75.776 395.264 395.264 395.264-395.264-75.776-75.776z"/>
+        </svg>
+    </div>
+
+    <div class="card-wrapper">
+        <div class="orange-card">
+            
+            <div class="card-title">
+                <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M746.666667 170.666667H277.333333c-23.466667 0-42.666667 19.2-42.666666 42.666666v640h554.666666V213.333333c0-23.466667-19.2-42.666667-42.666666-42.666666z m-42.666667 640H320V256h384v554.666667z" />
+                    <path d="M426.666667 384h170.666666v42.666667H426.666667zM426.666667 512h170.666666v42.666667H426.666667zM426.666667 640h170.666666v42.666667H426.666667z" />
+                </svg>
+                <span>人力资源公司×××</span>
+            </div>
+
+            <div class="gray-box">
+                <span class="label">检索来源</span>
+                <span class="value">从方案第1条</span>
+            </div>
+
+            <div class="gray-box">
+                <span class="label">系统已自动</span>
+            </div>
+
+            <div class="pink-box">
+                <div class="pink-box-title">资质核查项：</div>
+                <div class="skeleton-bar-gray"></div>
+                <div class="skeleton-bar-gray"></div>
+                <div class="skeleton-bar-gray"></div>
+                <div class="skeleton-bar-gray"></div>
+            </div>
+
+            <div class="beige-box"></div>
+            <div class="beige-box"></div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

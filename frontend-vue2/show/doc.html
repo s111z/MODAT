@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合规与运营方案</title>
+    <style>
+        :root {
+            --primary-blue: #3b82f6;
+            --success-green: #52c41a;
+            --success-bg: #f6ffed;
+            --success-border: #d9f7be;
+            --text-main: #262626;
+            --text-secondary: #595959;
+            --border-color: #f0f0f0;
+            --bg-color: #fafafa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .layout-container {
+            width: 100%;
+            max-width: 900px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #f0f0f0;
+        }
+
+        /* 顶部导航栏样式 */
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: #fff;
+        }
+
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 16px 0;
+            font-size: 15px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-item.active {
+            color: var(--primary-blue);
+            font-weight: 500;
+        }
+
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--primary-blue);
+        }
+
+        .tab-icon {
+            font-size: 16px;
+            opacity: 0.7;
+        }
+
+        .tab-item.active .tab-icon {
+            opacity: 1;
+        }
+
+        /* 主体文档内容区域 */
+        .document-content {
+            padding: 40px 60px;
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            margin: 20px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.02);
+        }
+
+        .doc-title {
+            text-align: center;
+            font-size: 24px;
+            color: var(--text-main);
+            margin: 0 0 16px 0;
+            line-height: 1.4;
+        }
+
+        .badge-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .ai-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background-color: #f0fdf4;
+            color: #22c55e;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid #dcfce7;
+        }
+
+        /* 绿色高亮框 */
+        .highlight-box {
+            background-color: var(--success-bg);
+            border: 1px solid var(--success-border);
+            border-radius: 6px;
+            padding: 20px 24px;
+            margin-bottom: 30px;
+        }
+
+        .highlight-title {
+            color: var(--success-green);
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .highlight-list {
+            margin: 0;
+            padding-left: 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 2;
+        }
+
+        .highlight-list li {
+            position: relative;
+            list-style-type: disc;
+            color: #8c8c8c; /* 修改小圆点的颜色 */
+        }
+        
+        .highlight-list li span {
+            color: var(--text-secondary); /* 保持文字颜色 */
+        }
+
+        /* 分割线 */
+        .divider {
+            height: 1px;
+            background-color: var(--border-color);
+            border: none;
+            margin: 30px 0;
+        }
+
+        /* 正文样式 */
+        .section-title {
+            font-size: 18px;
+            color: var(--text-main);
+            margin: 24px 0 16px 0;
+            font-weight: bold;
+        }
+
+        .paragraph {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin: 0 0 16px 0;
+            text-align: justify;
+        }
+
+        .paragraph strong {
+            color: var(--text-main);
+        }
+
+        @media (max-width: 768px) {
+            .document-content {
+                padding: 20px;
+                margin: 10px;
+            }
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+            .tab-item {
+                min-width: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="layout-container">
+    <nav class="nav-tabs">
+        <div class="tab-item"><span class="tab-icon">📄</span> 文档预览</div>
+        <div class="tab-item"><span class="tab-icon">⚙️</span> 工作流程</div>
+        <div class="tab-item"><span class="tab-icon">📊</span> 审核报告</div>
+        <div class="tab-item active"><span class="tab-icon">✍️</span> 方案优化</div>
+    </nav>
+
+    <div class="document-content">
+        <h1 class="doc-title">《xx汽车零件生产公司墨西哥分厂人力资源合规与运营方案<br>（优化版）》</h1>
+        
+        <div class="badge-container">
+            <span class="ai-badge">✓ AI 重写完成</span>
+        </div>
+
+        <div class="highlight-box">
+            <div class="highlight-title">※ 核心合规优化亮点：</div>
+            <ul class="highlight-list">
+                <li><span>核心用工结构：直接雇佣与专业外包相结合</span></li>
+                <li><span>风险保障机制：REPSE 资质穿透式审核</span></li>
+                <li><span>利润分享管理：利用新公司首年豁免期</span></li>
+                <li><span>工时与文化对齐：将“强制待命”修改为“自愿值班津贴制”</span></li>
+            </ul>
+        </div>
+
+        <hr class="divider">
+
+        <h2 class="section-title">项目背景</h2>
+        <p class="paragraph">为确保我司墨西哥工厂在法律框架下稳健运行，实现长期用工成本的可控与风险规避，特依据墨西哥《宪法》及《联邦劳动法（LFT）》制定本方案。</p>
+
+        <h2 class="section-title">一、核心用工结构：直接雇佣与专业外包相结合</h2>
+        <p class="paragraph"><strong>核心岗位直接雇佣：</strong>鉴于组装线操作、质量检测等岗位属于我司企业宗旨（Objeto Social）中的主营业务活动，我司将对上述岗位员工实行直接雇佣模式，签署正式劳动合同。此举旨在规避 LFT 第 12 条严禁的“人员分包”风险，确保生产核心环节的合法性。</p>
+        
+        <p class="paragraph"><strong>非核心业务专业化外包：</strong>将厂区的工业设备年度深度维护、废物处理及物流运输业务，外包给具备合法资质的第三方公司。根据 LFT 第 13 条，此类业务不属于我司核心经济活动，依法允许外包，从而实现组织架构的扁平化并降低管理行政负担。</p>
+
+        <h2 class="section-title">二、风险保障机制：REPSE 资质穿透式审核</h2>
+        <p class="paragraph">所有外包合作方必须提供其在劳工部（STPS）的有效 REPSE 注册号以规避 LFT 第 15 条规定的连带责任风险。</p>
+    </div>
+</div>
+
+</body>
+</html>

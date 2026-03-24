@@ -16,204 +16,8 @@
     }
   },
   "conversations": [
-    {
+        {
       "id": "knowledge-qa-1",
-      "userMessage": "什么是深度学习中的梯度消失问题？",
-      "assistantMessage": "梯度消失问题是深度学习训练中的常见挑战，主要表现为：\n\n**问题描述**\n在反向传播过程中，梯度值随着层数增加而指数级衰减，导致前面层的参数几乎无法更新。\n\n**产生原因**\n1. 激活函数选择不当（如Sigmoid、Tanh）\n2. 网络层数过深\n3. 权重初始化不合理\n\n**解决方案**\n1. 使用ReLU等激活函数\n2. 采用残差连接（ResNet）\n3. 使用Batch Normalization\n4. 合理的权重初始化策略（如Xavier、He初始化）\n5. 使用LSTM、GRU等门控机制\n\n综合知识库和网络资源，这些方法已被证明能有效缓解梯度消失问题。",
-      "agentWorkflow": {
-        "steps": [
-          {
-            "id": "query-analysis",
-            "name": "Query分析",
-            "icon": "🔍",
-            "status": "pending",
-            "expandable": true,
-            "details": {
-              "title": "提取关键词",
-              "keywords": [
-                {
-                  "word": "深度学习",
-                  "weight": 0.95,
-                  "category": "领域"
-                },
-                {
-                  "word": "梯度消失",
-                  "weight": 1.0,
-                  "category": "核心概念"
-                },
-                {
-                  "word": "问题",
-                  "weight": 0.7,
-                  "category": "意图"
-                }
-              ],
-              "intent": "概念解释",
-              "confidence": 0.92
-            }
-          },
-          {
-            "id": "query-construction",
-            "name": "查询构造",
-            "icon": "🔨",
-            "status": "pending",
-            "expandable": true,
-            "details": {
-              "title": "基于关键词泛化查询",
-              "queries": [
-                {
-                  "original": "什么是深度学习中的梯度消失问题",
-                  "expanded": [
-                    "深度神经网络梯度消失原因",
-                    "gradient vanishing problem in deep learning",
-                    "如何解决梯度消失问题",
-                    "反向传播梯度衰减",
-                    "梯度消失与梯度爆炸的区别"
-                  ]
-                }
-              ],
-              "queryStrategy": "概念扩展 + 问题解决",
-              "totalQueries": 5
-            }
-          },
-          {
-            "id": "knowledge-retrieval",
-            "name": "知识库检索",
-            "icon": "📚",
-            "status": "pending",
-            "expandable": true,
-            "details": {
-              "title": "知识库召回结果",
-              "results": [
-                {
-                  "docTitle": "深度学习优化技术指南",
-                  "relevance": 0.94,
-                  "source": "内部知识库",
-                  "excerpt": "梯度消失问题（Vanishing Gradient Problem）是指在使用反向传播算法训练深度神经网络时，梯度值随着向前传播而逐渐减小，最终接近于零...",
-                  "matchedKeywords": ["梯度消失", "深度学习", "反向传播"]
-                },
-                {
-                  "docTitle": "神经网络训练常见问题",
-                  "relevance": 0.89,
-                  "source": "内部知识库",
-                  "excerpt": "使用Sigmoid或Tanh激活函数时，其导数范围在(0, 0.25]和(0, 1]之间，多层连乘后梯度会迅速衰减...",
-                  "matchedKeywords": ["梯度消失", "激活函数"]
-                },
-                {
-                  "docTitle": "ResNet架构详解",
-                  "relevance": 0.82,
-                  "source": "内部知识库",
-                  "excerpt": "残差连接通过跳跃连接（skip connection）使得梯度可以直接传播，有效缓解了深层网络的梯度消失问题...",
-                  "matchedKeywords": ["梯度消失", "残差连接"]
-                }
-              ],
-              "totalResults": 3,
-              "avgRelevance": 0.88
-            }
-          },
-          {
-            "id": "web-retrieval",
-            "name": "网络检索",
-            "icon": "🌐",
-            "status": "pending",
-            "expandable": true,
-            "details": {
-              "title": "网络召回结果",
-              "results": [
-                {
-                  "title": "Understanding the Vanishing Gradient Problem",
-                  "url": "https://example.com/gradient-vanishing",
-                  "relevance": 0.96,
-                  "source": "机器学习博客",
-                  "excerpt": "The vanishing gradient problem occurs when gradients become extremely small during backpropagation, making it difficult to train deep networks effectively...",
-                  "matchedKeywords": ["vanishing gradient", "backpropagation"]
-                },
-                {
-                  "title": "深度学习中的梯度问题及解决方案",
-                  "url": "https://example.com/deep-learning-gradients",
-                  "relevance": 0.91,
-                  "source": "知乎专栏",
-                  "excerpt": "梯度消失和梯度爆炸是训练深度神经网络的两大难题。本文详细介绍了ReLU、Batch Normalization等解决方案...",
-                  "matchedKeywords": ["梯度消失", "解决方案"]
-                }
-              ],
-              "totalResults": 2,
-              "avgRelevance": 0.935
-            }
-          },
-          {
-            "id": "multi-source-pk",
-            "name": "多路PK",
-            "icon": "⚖️",
-            "status": "pending",
-            "expandable": true,
-            "details": {
-              "title": "多源对比分析",
-              "comparisons": [
-                {
-                  "topic": "问题定义",
-                  "knowledgeBase": "梯度值在反向传播中逐层衰减，导致前层参数无法有效更新",
-                  "webSource": "反向传播时梯度变得极小，使得深层网络训练困难",
-                  "conflict": false,
-                  "conclusion": "两者描述一致，都强调梯度衰减导致训练困难",
-                  "confidence": 0.95
-                },
-                {
-                  "topic": "主要原因",
-                  "knowledgeBase": "激活函数导数小（Sigmoid、Tanh）、网络过深、权重初始化不当",
-                  "webSource": "主要是激活函数的饱和特性导致导数接近0",
-                  "conflict": true,
-                  "conclusion": "网络资源强调激活函数是主因，知识库给出了更全面的原因列表。采用知识库的全面分析",
-                  "confidence": 0.88
-                },
-                {
-                  "topic": "解决方案",
-                  "knowledgeBase": "ReLU激活函数、残差连接、Batch Normalization、合理初始化",
-                  "webSource": "使用ReLU、BatchNorm、残差网络、LSTM门控机制",
-                  "conflict": false,
-                  "conclusion": "两者高度一致，综合两路信息形成完整方案列表",
-                  "confidence": 0.93
-                }
-              ],
-              "finalDecision": "综合采用知识库的结构化内容和网络资源的实例说明",
-              "conflictCount": 1,
-              "agreementRate": 0.67
-            }
-          },
-          {
-            "id": "response-generation",
-            "name": "回复生成",
-            "icon": "✍️",
-            "status": "pending",
-            "expandable": true,
-            "details": {
-              "title": "生成回复大纲",
-              "outline": [
-                {
-                  "section": "问题描述",
-                  "content": "用简洁的语言解释梯度消失现象"
-                },
-                {
-                  "section": "产生原因",
-                  "content": "列举3个主要原因，采用知识库的全面分析"
-                },
-                {
-                  "section": "解决方案",
-                  "content": "提供5个具体的解决方法，结合理论与实践"
-                },
-                {
-                  "section": "总结",
-                  "content": "强调这些方法的有效性，基于权威来源"
-                }
-              ],
-              "estimatedLength": "约300字",
-              "tone": "专业、清晰、结构化"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "id": "knowledge-qa-2",
       "userMessage": "GDPR对数据跨境传输有什么要求？",
       "assistantMessage": "GDPR（通用数据保护条例）对数据跨境传输有严格的要求：\n\n**基本原则**\n只有在满足特定条件的情况下，才能将个人数据传输到欧盟/欧洲经济区以外的国家。\n\n**合法传输机制**\n1. **充分性决定**：欧盟委员会认定目标国家提供足够的数据保护水平\n2. **标准合同条款（SCC）**：使用欧盟批准的标准合同\n3. **约束性公司规则（BCR）**：跨国公司内部的数据保护规则\n4. **行为准则和认证机制**：遵循已批准的行为准则\n\n**特殊情况例外**\n- 数据主体明确同意\n- 履行合同所必需\n- 重大公共利益\n- 法律诉讼需要\n\n**实践建议**\n根据知识库和欧盟官方指南，建议企业优先使用SCC，并进行传输影响评估（TIA）。",
       "agentWorkflow": {
@@ -403,6 +207,202 @@
               ],
               "estimatedLength": "约350字",
               "tone": "专业、权威、实用"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "knowledge-qa-2",
+      "userMessage": "什么是深度学习中的梯度消失问题？",
+      "assistantMessage": "梯度消失问题是深度学习训练中的常见挑战，主要表现为：\n\n**问题描述**\n在反向传播过程中，梯度值随着层数增加而指数级衰减，导致前面层的参数几乎无法更新。\n\n**产生原因**\n1. 激活函数选择不当（如Sigmoid、Tanh）\n2. 网络层数过深\n3. 权重初始化不合理\n\n**解决方案**\n1. 使用ReLU等激活函数\n2. 采用残差连接（ResNet）\n3. 使用Batch Normalization\n4. 合理的权重初始化策略（如Xavier、He初始化）\n5. 使用LSTM、GRU等门控机制\n\n综合知识库和网络资源，这些方法已被证明能有效缓解梯度消失问题。",
+      "agentWorkflow": {
+        "steps": [
+          {
+            "id": "query-analysis",
+            "name": "Query分析",
+            "icon": "🔍",
+            "status": "pending",
+            "expandable": true,
+            "details": {
+              "title": "提取关键词",
+              "keywords": [
+                {
+                  "word": "深度学习",
+                  "weight": 0.95,
+                  "category": "领域"
+                },
+                {
+                  "word": "梯度消失",
+                  "weight": 1.0,
+                  "category": "核心概念"
+                },
+                {
+                  "word": "问题",
+                  "weight": 0.7,
+                  "category": "意图"
+                }
+              ],
+              "intent": "概念解释",
+              "confidence": 0.92
+            }
+          },
+          {
+            "id": "query-construction",
+            "name": "查询构造",
+            "icon": "🔨",
+            "status": "pending",
+            "expandable": true,
+            "details": {
+              "title": "基于关键词泛化查询",
+              "queries": [
+                {
+                  "original": "什么是深度学习中的梯度消失问题",
+                  "expanded": [
+                    "深度神经网络梯度消失原因",
+                    "gradient vanishing problem in deep learning",
+                    "如何解决梯度消失问题",
+                    "反向传播梯度衰减",
+                    "梯度消失与梯度爆炸的区别"
+                  ]
+                }
+              ],
+              "queryStrategy": "概念扩展 + 问题解决",
+              "totalQueries": 5
+            }
+          },
+          {
+            "id": "knowledge-retrieval",
+            "name": "知识库检索",
+            "icon": "📚",
+            "status": "pending",
+            "expandable": true,
+            "details": {
+              "title": "知识库召回结果",
+              "results": [
+                {
+                  "docTitle": "深度学习优化技术指南",
+                  "relevance": 0.94,
+                  "source": "内部知识库",
+                  "excerpt": "梯度消失问题（Vanishing Gradient Problem）是指在使用反向传播算法训练深度神经网络时，梯度值随着向前传播而逐渐减小，最终接近于零...",
+                  "matchedKeywords": ["梯度消失", "深度学习", "反向传播"]
+                },
+                {
+                  "docTitle": "神经网络训练常见问题",
+                  "relevance": 0.89,
+                  "source": "内部知识库",
+                  "excerpt": "使用Sigmoid或Tanh激活函数时，其导数范围在(0, 0.25]和(0, 1]之间，多层连乘后梯度会迅速衰减...",
+                  "matchedKeywords": ["梯度消失", "激活函数"]
+                },
+                {
+                  "docTitle": "ResNet架构详解",
+                  "relevance": 0.82,
+                  "source": "内部知识库",
+                  "excerpt": "残差连接通过跳跃连接（skip connection）使得梯度可以直接传播，有效缓解了深层网络的梯度消失问题...",
+                  "matchedKeywords": ["梯度消失", "残差连接"]
+                }
+              ],
+              "totalResults": 3,
+              "avgRelevance": 0.88
+            }
+          },
+          {
+            "id": "web-retrieval",
+            "name": "网络检索",
+            "icon": "🌐",
+            "status": "pending",
+            "expandable": true,
+            "details": {
+              "title": "网络召回结果",
+              "results": [
+                {
+                  "title": "Understanding the Vanishing Gradient Problem",
+                  "url": "https://example.com/gradient-vanishing",
+                  "relevance": 0.96,
+                  "source": "机器学习博客",
+                  "excerpt": "The vanishing gradient problem occurs when gradients become extremely small during backpropagation, making it difficult to train deep networks effectively...",
+                  "matchedKeywords": ["vanishing gradient", "backpropagation"]
+                },
+                {
+                  "title": "深度学习中的梯度问题及解决方案",
+                  "url": "https://example.com/deep-learning-gradients",
+                  "relevance": 0.91,
+                  "source": "知乎专栏",
+                  "excerpt": "梯度消失和梯度爆炸是训练深度神经网络的两大难题。本文详细介绍了ReLU、Batch Normalization等解决方案...",
+                  "matchedKeywords": ["梯度消失", "解决方案"]
+                }
+              ],
+              "totalResults": 2,
+              "avgRelevance": 0.935
+            }
+          },
+          {
+            "id": "multi-source-pk",
+            "name": "多路PK",
+            "icon": "⚖️",
+            "status": "pending",
+            "expandable": true,
+            "details": {
+              "title": "多源对比分析",
+              "comparisons": [
+                {
+                  "topic": "问题定义",
+                  "knowledgeBase": "梯度值在反向传播中逐层衰减，导致前层参数无法有效更新",
+                  "webSource": "反向传播时梯度变得极小，使得深层网络训练困难",
+                  "conflict": false,
+                  "conclusion": "两者描述一致，都强调梯度衰减导致训练困难",
+                  "confidence": 0.95
+                },
+                {
+                  "topic": "主要原因",
+                  "knowledgeBase": "激活函数导数小（Sigmoid、Tanh）、网络过深、权重初始化不当",
+                  "webSource": "主要是激活函数的饱和特性导致导数接近0",
+                  "conflict": true,
+                  "conclusion": "网络资源强调激活函数是主因，知识库给出了更全面的原因列表。采用知识库的全面分析",
+                  "confidence": 0.88
+                },
+                {
+                  "topic": "解决方案",
+                  "knowledgeBase": "ReLU激活函数、残差连接、Batch Normalization、合理初始化",
+                  "webSource": "使用ReLU、BatchNorm、残差网络、LSTM门控机制",
+                  "conflict": false,
+                  "conclusion": "两者高度一致，综合两路信息形成完整方案列表",
+                  "confidence": 0.93
+                }
+              ],
+              "finalDecision": "综合采用知识库的结构化内容和网络资源的实例说明",
+              "conflictCount": 1,
+              "agreementRate": 0.67
+            }
+          },
+          {
+            "id": "response-generation",
+            "name": "回复生成",
+            "icon": "✍️",
+            "status": "pending",
+            "expandable": true,
+            "details": {
+              "title": "生成回复大纲",
+              "outline": [
+                {
+                  "section": "问题描述",
+                  "content": "用简洁的语言解释梯度消失现象"
+                },
+                {
+                  "section": "产生原因",
+                  "content": "列举3个主要原因，采用知识库的全面分析"
+                },
+                {
+                  "section": "解决方案",
+                  "content": "提供5个具体的解决方法，结合理论与实践"
+                },
+                {
+                  "section": "总结",
+                  "content": "强调这些方法的有效性，基于权威来源"
+                }
+              ],
+              "estimatedLength": "约300字",
+              "tone": "专业、清晰、结构化"
             }
           }
         ]

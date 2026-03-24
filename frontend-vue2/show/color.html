@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审核工作流程</title>
+    <style>
+        /* 基础重置 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* 整体容器 */
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: #ffffff;
+            border-left: 1px solid #e0e0e0;
+            border-right: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            min-height: 800px;
+        }
+
+        /* 顶部导航栏 - 修改点：设定固定高度，移除上下内边距 */
+        .top-nav {
+            display: flex;
+            background: linear-gradient(to right, #e8d0aa, #e4c89e);
+            height: 60px; /* 设定导航栏整体高度 */
+            border-bottom: 2px solid #fff;
+        }
+
+        /* 导航选项 - 修改点：让选项撑满高度，并均分宽度 */
+        .nav-item {
+            flex: 1; /* 让四个选项均分头部宽度 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%; /* 高度 100% 撑满父级，实现上下贴边 */
+            color: #7a6850; 
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        /* 选中状态的样式区分 - 充满整个区块 */
+        .nav-item.active {
+            color: #4a3a28; /* 文字颜色加深 */
+            background-color: rgba(255, 255, 255, 0.5); /* 整个区域提亮 */
+            /* 如果需要纯白底色，可以换成 background-color: #ffffff; */
+        }
+
+        /* 鼠标悬停提示 */
+        .nav-item:hover:not(.active) {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #5c4e3b;
+        }
+
+        /* 主体内容区域 */
+        .main-content {
+            padding: 30px;
+        }
+
+        /* 页面标题 */
+        .page-title {
+            font-size: 18px;
+            color: #222;
+            margin-bottom: 25px;
+            font-weight: bold;
+        }
+
+        /* 进度条区域 */
+        .progress-section {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .progress-track {
+            flex: 1;
+            height: 4px;
+            background-color: #e8eaf6;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .progress-text {
+            margin-left: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* 折叠面板头部 */
+        .accordion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-top: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .chevron {
+            color: #999;
+            font-size: 12px;
+            transform: scaleX(1.5);
+        }
+
+        /* 卡片外部双层边框设计 */
+        .card-outer-border {
+            border: 1px solid #f5d4a9; 
+            border-radius: 8px;
+            padding: 4px;
+            background-color: #fff;
+        }
+
+        .card-inner {
+            border: 1px solid #ed8e24; 
+            border-radius: 6px;
+            padding: 20px;
+        }
+
+        /* 卡片标题 */
+        .card-title-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title-icon {
+            width: 18px;
+            height: 18px;
+            fill: #ed8e24;
+            margin-right: 8px;
+        }
+
+        .card-title {
+            color: #ed8e24;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* 信息检索框 (灰色背景) */
+        .info-box {
+            background-color: #fafafa;
+            border-radius: 4px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+        }
+
+        .info-label {
+            color: #888;
+            margin-right: 15px;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: bold;
+        }
+
+        .info-text-only {
+            color: #666;
+        }
+
+        /* 资质核查项 (粉色边框框) */
+        .checklist-container {
+            border: 1px solid #f5d0d0;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .checklist-title {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        /* 骨架屏占位符 */
+        .skeleton-gray {
+            height: 24px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .skeleton-gray:last-child {
+            margin-bottom: 0;
+        }
+
+        .skeleton-orange {
+            height: 45px;
+            background-color: #fdf6ea;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        .skeleton-orange:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header class="top-nav">
+        <div class="nav-item">文档预览</div>
+        <div class="nav-item active">工作流程</div>
+        <div class="nav-item">审核报告</div>
+        <div class="nav-item">优化方案</div>
+    </header>
+
+    <main class="main-content">
+        <h1 class="page-title">审核工作流程</h1>
+        
+        <div class="progress-section">
+            <div class="progress-track"></div>
+            <div class="progress-text">0%</div>
+        </div>
+
+        <div class="accordion-header">
+            <span>合规审查SERVER</span>
+            <span class="chevron">∨</span>
+        </div>
+
+        <div class="card-outer-border">
+            <div class="card-inner">
+                
+                <div class="card-title-row">
+                    <svg class="card-title-icon" viewBox="0 0 24 24">
+                        <path d="M5 3v18h14V3H5zm2 2h10v14H7V5zm2 2v2h6V7H9zm0 4v2h6v-2H9zm0 4v2h6v-2H9z"/>
+                    </svg>
+                    <div class="card-title">人力资源公司×××</div>
+                </div>
+
+                <div class="info-box">
+                    <span class="info-label">检索来源</span>
+                    <span class="info-value">从方案第1条</span>
+                </div>
+
+                <div class="info-box">
+                    <span class="info-text-only">系统已自动</span>
+                </div>
+
+                <div class="checklist-container">
+                    <div class="checklist-title">资质核查项：</div>
+                    <div class="skeleton-gray"></div>
+                    <div class="skeleton-gray"></div>
+                    <div class="skeleton-gray"></div>
+                    <div class="skeleton-gray"></div>
+                </div>
+
+                <div class="skeleton-orange"></div>
+                <div class="skeleton-orange"></div>
+
+            </div>
+        </div>
+
+    </main>
+</div>
+
+</body>
+</html>

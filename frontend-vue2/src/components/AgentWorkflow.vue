@@ -211,11 +211,12 @@ export default {
 
 <style scoped>
 .agent-workflow {
-  background: #f8f9fa;
+  background: linear-gradient(135deg, #FFFDF7 0%, #FFF9E6 100%);
   border-radius: 8px;
   padding: 16px;
   height: 100%;
   overflow-y: auto;
+  border: 2px solid #FDE2BE;
 }
 
 .workflow-title {
@@ -224,14 +225,15 @@ export default {
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #E47728;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #e9ecef;
+  border-bottom: 2px solid #FDE2BE;
 }
 
 .title-icon {
   font-size: 20px;
+  filter: drop-shadow(0 1px 2px rgba(228, 119, 40, 0.2));
 }
 
 .workflow-steps {
@@ -253,12 +255,12 @@ export default {
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  border: 1px solid #e9ecef;
+  border: 1px solid #FFF9E6;
 }
 
 .step-header:hover {
-  background: #f1f3f5;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(90deg, #FFF9E6 0%, #FFFDF7 100%);
+  box-shadow: 0 2px 8px rgba(246, 165, 90, 0.15);
 }
 
 .step-header-left {
@@ -269,11 +271,12 @@ export default {
 
 .step-icon {
   font-size: 18px;
+  filter: drop-shadow(0 1px 2px rgba(228, 119, 40, 0.2));
 }
 
 .step-name {
   font-weight: 500;
-  color: #495057;
+  color: #E47728;
 }
 
 .step-header-right {
@@ -298,7 +301,7 @@ export default {
 
 .step-expand-icon {
   font-size: 12px;
-  color: #868e96;
+  color: #F6A55A;
   transition: transform 0.2s;
 }
 
@@ -311,8 +314,8 @@ export default {
 }
 
 .step-processing .step-header {
-  background: #e7f5ff;
-  border-color: #74c0fc;
+  background: linear-gradient(135deg, #FFF9E6 0%, #FFFDF7 100%);
+  border-color: #F6A55A;
 }
 
 .step-completed .step-header {
@@ -323,20 +326,20 @@ export default {
   margin-top: 8px;
   padding: 12px;
   background: white;
-  border: 1px solid #e9ecef;
+  border: 1px solid #FDE2BE;
   border-radius: 6px;
 }
 
 .details-title {
   font-weight: 600;
-  color: #495057;
+  color: #E47728;
   margin-bottom: 12px;
   font-size: 14px;
 }
 
 .details-content {
   font-size: 13px;
-  color: #6c757d;
+  color: #595959;
 }
 
 /* Query分析样式 */
@@ -352,14 +355,14 @@ export default {
   flex-direction: column;
   gap: 4px;
   padding: 8px;
-  background: #f8f9fa;
+  background: #FFF9E6;
   border-radius: 4px;
-  border-left: 3px solid #74c0fc;
+  border-left: 3px solid #F6A55A;
 }
 
 .keyword-word {
   font-weight: 600;
-  color: #1971c2;
+  color: #E47728;
 }
 
 .keyword-meta {
@@ -369,13 +372,13 @@ export default {
 }
 
 .keyword-weight {
-  color: #f76707;
+  color: #E47728;
   font-weight: 600;
 }
 
 .keyword-category {
-  color: #868e96;
-  background: #e9ecef;
+  color: #8c8c8c;
+  background: #FDE2BE;
   padding: 2px 6px;
   border-radius: 3px;
 }
@@ -385,24 +388,25 @@ export default {
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background: #e7f5ff;
+  background: linear-gradient(135deg, #FFF9E6 0%, #FFFDF7 100%);
   border-radius: 4px;
+  border: 1px solid #FDE2BE;
 }
 
 .intent-label {
   font-weight: 600;
-  color: #495057;
+  color: #262626;
 }
 
 .intent-value {
-  color: #1971c2;
+  color: #E47728;
   font-weight: 600;
 }
 
 .confidence-badge {
   margin-left: auto;
   padding: 2px 8px;
-  background: #51cf66;
+  background: #E47728;
   color: white;
   border-radius: 10px;
   font-size: 11px;
@@ -417,16 +421,17 @@ export default {
 
 .query-label {
   font-weight: 600;
-  color: #495057;
+  color: #262626;
   margin-bottom: 6px;
 }
 
 .query-text {
   padding: 8px;
-  background: #e7f5ff;
+  background: linear-gradient(135deg, #FFF9E6 0%, #FFFDF7 100%);
   border-radius: 4px;
-  color: #1971c2;
+  color: #E47728;
   font-weight: 500;
+  border: 1px solid #FDE2BE;
 }
 
 .query-list {
@@ -439,43 +444,45 @@ export default {
   display: flex;
   gap: 8px;
   padding: 6px 8px;
-  background: #f8f9fa;
+  background: #FFF9E6;
   border-radius: 4px;
 }
 
 .query-index {
-  color: #868e96;
+  color: #F6A55A;
   font-weight: 600;
   min-width: 20px;
 }
 
 .query-content {
-  color: #495057;
+  color: #595959;
 }
 
 .strategy-info {
   padding: 8px;
-  background: #fff3bf;
+  background: #FFF9E6;
   border-radius: 4px;
+  border: 1px solid #FDE2BE;
 }
 
 .strategy-label {
   font-weight: 600;
-  color: #495057;
+  color: #262626;
 }
 
 .strategy-value {
-  color: #f76707;
+  color: #E47728;
   font-weight: 500;
 }
 
 /* 检索结果样式 */
 .retrieval-summary {
   padding: 8px;
-  background: #e7f5ff;
+  background: linear-gradient(135deg, #FFF9E6 0%, #FFFDF7 100%);
   border-radius: 4px;
   margin-bottom: 12px;
-  color: #495057;
+  color: #595959;
+  border: 1px solid #FDE2BE;
 }
 
 .result-list {
@@ -486,9 +493,11 @@ export default {
 
 .result-item {
   padding: 10px;
-  background: #f8f9fa;
+  background: #FFFDF7;
   border-radius: 4px;
-  border-left: 3px solid #74c0fc;
+  border-left: 3px solid #F6A55A;
+  border: 1px solid #FDE2BE;
+  border-left: 3px solid #F6A55A;
 }
 
 .result-header {
@@ -500,13 +509,13 @@ export default {
 
 .result-title {
   font-weight: 600;
-  color: #1971c2;
+  color: #E47728;
   flex: 1;
 }
 
 .result-relevance {
   padding: 2px 8px;
-  background: #51cf66;
+  background: #E47728;
   color: white;
   border-radius: 10px;
   font-size: 11px;
@@ -515,19 +524,19 @@ export default {
 
 .result-source {
   font-size: 12px;
-  color: #868e96;
+  color: #8c8c8c;
   margin-bottom: 6px;
 }
 
 .result-excerpt {
-  color: #495057;
+  color: #595959;
   line-height: 1.5;
   margin-bottom: 8px;
 }
 
 .result-url {
   font-size: 11px;
-  color: #1971c2;
+  color: #E47728;
   word-break: break-all;
 }
 
@@ -539,23 +548,25 @@ export default {
 
 .matched-keyword {
   padding: 2px 6px;
-  background: #e7f5ff;
-  color: #1971c2;
+  background: #FFF9E6;
+  color: #E47728;
   border-radius: 3px;
   font-size: 11px;
+  border: 1px solid #FDE2BE;
 }
 
 /* 多路PK样式 */
 .pk-summary {
   padding: 8px;
-  background: #fff3bf;
+  background: #FFF9E6;
   border-radius: 4px;
   margin-bottom: 12px;
-  color: #495057;
+  color: #595959;
+  border: 1px solid #FDE2BE;
 }
 
 .conflict-count {
-  color: #f03e3e;
+  color: #f56c6c;
   font-weight: 600;
 }
 
@@ -568,19 +579,21 @@ export default {
 
 .comparison-item {
   padding: 12px;
-  background: #f8f9fa;
+  background: #FFFDF7;
   border-radius: 4px;
-  border-left: 3px solid #51cf66;
+  border-left: 3px solid #52c41a;
+  border: 1px solid #FDE2BE;
+  border-left: 3px solid #52c41a;
 }
 
 .comparison-item.has-conflict {
-  border-left-color: #ff8787;
+  border-left-color: #f56c6c;
   background: #fff5f5;
 }
 
 .comparison-topic {
   font-weight: 600;
-  color: #495057;
+  color: #262626;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -589,7 +602,7 @@ export default {
 
 .conflict-badge {
   padding: 2px 6px;
-  background: #ff8787;
+  background: #f56c6c;
   color: white;
   border-radius: 3px;
   font-size: 11px;
@@ -608,22 +621,24 @@ export default {
 }
 
 .source-item.knowledge-base {
-  background: #e7f5ff;
+  background: linear-gradient(135deg, #FFF9E6 0%, #FFFDF7 100%);
+  border: 1px solid #FDE2BE;
 }
 
 .source-item.web-source {
-  background: #e3fafc;
+  background: linear-gradient(135deg, #FFFDF7 0%, #FFF9E6 100%);
+  border: 1px solid #FDE2BE;
 }
 
 .source-label {
   font-weight: 600;
-  color: #495057;
+  color: #E47728;
   margin-bottom: 4px;
   font-size: 12px;
 }
 
 .source-content {
-  color: #495057;
+  color: #595959;
   line-height: 1.5;
 }
 
@@ -634,40 +649,44 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  border: 1px solid #FDE2BE;
 }
 
 .conclusion-label {
   font-weight: 600;
-  color: #495057;
+  color: #E47728;
   font-size: 12px;
 }
 
 .conclusion-content {
-  color: #495057;
+  color: #595959;
   line-height: 1.5;
 }
 
 .final-decision {
   padding: 10px;
-  background: #d0ebff;
+  background: linear-gradient(135deg, #FFF9E6 0%, #FFFDF7 100%);
   border-radius: 4px;
-  color: #1971c2;
+  color: #E47728;
   line-height: 1.5;
+  border: 1px solid #FDE2BE;
+  font-weight: 500;
 }
 
 /* 回复生成样式 */
 .generation-meta {
   padding: 8px;
-  background: #e7f5ff;
+  background: linear-gradient(135deg, #FFF9E6 0%, #FFFDF7 100%);
   border-radius: 4px;
   margin-bottom: 12px;
-  color: #495057;
+  color: #595959;
   display: flex;
   gap: 8px;
+  border: 1px solid #FDE2BE;
 }
 
 .separator {
-  color: #dee2e6;
+  color: #d4b895;
 }
 
 .outline-list {
@@ -678,19 +697,19 @@ export default {
 
 .outline-item {
   padding: 8px;
-  background: #f8f9fa;
+  background: #FFF9E6;
   border-radius: 4px;
-  border-left: 3px solid #74c0fc;
+  border-left: 3px solid #F6A55A;
 }
 
 .outline-section {
   font-weight: 600;
-  color: #1971c2;
+  color: #E47728;
   margin-bottom: 4px;
 }
 
 .outline-content {
-  color: #495057;
+  color: #595959;
   line-height: 1.5;
 }
 
@@ -698,7 +717,7 @@ export default {
 .step-connector {
   width: 2px;
   height: 12px;
-  background: #dee2e6;
+  background: #FDE2BE;
   margin: 0 auto;
   margin-left: 28px;
 }
@@ -724,16 +743,16 @@ export default {
 }
 
 .agent-workflow::-webkit-scrollbar-track {
-  background: #f1f3f5;
+  background: #FFF9E6;
   border-radius: 3px;
 }
 
 .agent-workflow::-webkit-scrollbar-thumb {
-  background: #ced4da;
+  background: #F6A55A;
   border-radius: 3px;
 }
 
 .agent-workflow::-webkit-scrollbar-thumb:hover {
-  background: #adb5bd;
+  background: #E47728;
 }
 </style>

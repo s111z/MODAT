@@ -2,12 +2,18 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '@/views/Home.vue'
 import HomeSingle from '@/views/HomeSingle.vue'
+import First from '@/views/First.vue'
 
 Vue.use(VueRouter)
 
 const routes = [
   {
     path: '/',
+    name: 'First',
+    component: First
+  },
+  {
+    path: '/content',
     name: 'Home',
     component: Home
   },

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>计算校验 UI</title>
+<style>
+  :root {
+    --text-dark: #333333;
+    --text-grey: #888888;
+    --theme-orange: #E47728;
+    --theme-light-orange: #F5A623;
+    --bg-main: #FFFDF7;
+    --border-main: #FDE2BE;
+    --card-border: #F6A55A;
+    --grey-box-bg: #F8F9FA;
+    --yellow-box-bg: #FFF9E6;
+    --pink-box-bg: #FFF3EB;
+    --pink-border: #FCDFC9;
+    --pink-text: #FF9E79;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    padding: 40px;
+    margin: 0;
+  }
+
+  .panel-container {
+    width: 600px;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  /* 顶部标题栏 */
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eeeeee;
+    font-weight: bold;
+    color: var(--text-dark);
+  }
+
+  .chevron-down {
+    color: var(--text-grey);
+    font-size: 14px;
+    transform: scale(1.5, 1);
+  }
+
+  /* 主体内容区 */
+  .panel-body {
+    background-color: var(--bg-main);
+    border: 2px solid var(--border-main);
+    margin: 15px;
+    padding: 15px;
+  }
+
+  /* 卡片样式 */
+  .card {
+    background-color: #ffffff;
+    border: 2px solid var(--card-border);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+
+  .card:last-child {
+    margin-bottom: 0;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    color: var(--theme-orange);
+    font-weight: bold;
+    font-size: 15px;
+    margin-bottom: 15px;
+  }
+
+  .icon-warning {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--theme-light-orange);
+    border-radius: 50%;
+    margin-right: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--theme-light-orange);
+  }
+
+  /* 各个区块通用样式 */
+  .section {
+    margin-bottom: 12px;
+  }
+
+  .section:last-child {
+    margin-bottom: 0;
+  }
+
+  .label {
+    font-size: 12px;
+    color: var(--text-grey);
+    margin-bottom: 6px;
+  }
+
+  /* 警告框 (灰色) */
+  .box-warning {
+    background-color: var(--grey-box-bg);
+    height: 40px;
+    border-radius: 4px;
+  }
+
+  /* 公式框 (黄色虚线框) */
+  .box-formula-wrapper {
+    border: 1px dotted #dddddd;
+    padding: 8px;
+    border-radius: 4px;
+  }
+  
+  .box-formula-inner {
+    background-color: var(--yellow-box-bg);
+    color: var(--theme-orange);
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 2px;
+  }
+
+  /* 建议框 (粉红色虚线框) */
+  .box-suggestion {
+    background-color: var(--pink-box-bg);
+    border: 1px dotted var(--pink-border);
+    padding: 10px;
+    border-radius: 4px;
+  }
+
+  .box-suggestion .label {
+    color: var(--pink-text);
+    margin-bottom: 4px;
+  }
+
+  .box-suggestion .content {
+    color: var(--theme-orange);
+    font-size: 13px;
+  }
+
+  /* 空卡片占位样式 */
+  .empty-box {
+    background-color: var(--grey-box-bg);
+    height: 40px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .empty-box-yellow {
+    background-color: var(--yellow-box-bg);
+    height: 30px;
+    border-radius: 2px;
+  }
+  .empty-box-pink {
+    background-color: var(--pink-box-bg);
+    height: 40px;
+    border-radius: 4px;
+    border: 1px dotted var(--pink-border);
+  }
+</style>
+</head>
+<body>
+
+<div class="panel-container">
+  <div class="panel-header">
+    <span>计算校验SERVER</span>
+    <span class="chevron-down">v</span>
+  </div>
+
+  <div class="panel-body">
+    
+    <div class="card">
+      <div class="card-header">
+        <span class="icon-warning">!</span> 罚金规模校验
+      </div>
+      
+      <div class="section">
+        <div class="label">系统警告:</div>
+        <div class="box-warning"></div>
+      </div>
+
+      <div class="section box-formula-wrapper">
+        <div class="label">计算公式:</div>
+        <div class="box-formula-inner">
+          单次违规罚金
+        </div>
+      </div>
+
+      <div class="section box-suggestion">
+        <div class="label">纠正建议</div>
+        <div class="content">建议立即修正财务预算</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="icon-warning">!</span>
+      </div>
+      
+      <div class="section">
+        <div class="empty-box" style="background-color: #FAFAFA;"></div>
+      </div>
+
+      <div class="section box-formula-wrapper">
+        <div class="empty-box-yellow"></div>
+      </div>
+
+      <div class="section empty-box-pink"></div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
