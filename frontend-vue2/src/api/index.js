@@ -1,7 +1,7 @@
 import axios from 'axios'
 import mockService from '@/mock'
 
-const API_BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:5000'
+const API_BASE_URL = process.env.VUE_APP_API_URL || ''
 
 // 配置 axios 默认选项
 axios.defaults.baseURL = API_BASE_URL

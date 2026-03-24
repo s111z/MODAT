@@ -21,7 +21,7 @@ const routes = [
     path: '/single',
     name: 'HomeSingle',
     component: HomeSingle
-  }
+  },
   {
     path: '/knowledge',
     name: 'Knowledge',
