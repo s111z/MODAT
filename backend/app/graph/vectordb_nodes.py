@@ -2,7 +2,6 @@ from typing import Dict, Any
 from .vectordb_state import VectorDBState
 from core.vector_store import db_manager
 from core.text_splitter import RecursiveCharacterTextSplitter
-from core.parse_doc import extract_text_from_pdf
 import uuid
 
 try:
@@ -233,29 +232,21 @@ def node_add_documents(state: VectorDBState) -> Dict[str, Any]:
         filename = state.get("filename")
         state["steps"].append(f"正在读取文件: {filename}")
 
-        # 解析PDF文件
-        if file_type == '.pdf':
-            try:
-                text = extract_text_from_pdf(filepath)
-                state["content"] = text
-                state["steps"].append(f"成功提取PDF文本，共 {len(text)} 个字符")
-            except Exception as e:
-                state["success"] = False
-                state["message"] = f"PDF解析失败: {str(e)}"
-                state["steps"].append(state["message"])
-                return state
-        else:
-            # 处理纯文本文件
-            try:
-                with open(filename, 'r', encoding='utf-8') as f:
-                    text = f.read()
-                state["content"] = text
-                state["steps"].append(f"成功读取文本文件，共 {len(text)} 个字符")
-            except Exception as e:
-                state["success"] = False
-                state["message"] = f"文件读取失败: {str(e)}"
-                state["steps"].append(state["message"])
-                return state
+        # 使用DocParserAgent统一解析（支持PDF/DOCX/TXT）
+        try:
+            from agents.doc_parser_agent import DocParserAgent
+            parser = DocParserAgent()
+            parse_result = parser.parse(filepath)
+            text = parse_result["text"]
+            state["content"] = text
+            state["steps"].append(
+                f"成功解析{parse_result['file_type']}文件，共 {parse_result['char_count']} 个字符"
+            )
+        except Exception as e:
+            state["success"] = False
+            state["message"] = f"文档解析失败: {str(e)}"
+            state["steps"].append(state["message"])
+            return state
 
         # 检查文本是否为空
         if not text or len(text.strip()) == 0:

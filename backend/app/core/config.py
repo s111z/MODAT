@@ -16,7 +16,14 @@ class Settings(BaseSettings):
     
     # ChromaDB配置
     chroma_db_path: str = os.getenv("CHROMA_DB_PATH", "./chroma_db")
-    
+    chroma_collection_name: str = os.getenv("CHROMA_COLLECTION_NAME", "mota_knowledge")
+
+    # Embedding模型配置
+    embedding_model_type: str = os.getenv("EMBEDDING_MODEL_TYPE", "vllm")
+    model_base_dir: str = os.getenv("MODEL_BASE_DIR", "/root/modelparams")
+    embedding_model_name: str = os.getenv("EMBEDDING_MODEL_NAME", "Qwen3-Embedding-0.6B")
+    embedding_device: str = os.getenv("EMBEDDING_DEVICE", "cuda")
+
     # 应用配置
     app_env: str = os.getenv("APP_ENV", "development")
     debug: bool = os.getenv("DEBUG", "true").lower() == "true"

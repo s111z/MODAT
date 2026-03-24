@@ -634,6 +634,135 @@ async def delete_documents(request: VectorDBDeleteRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class BatchImportRequest(BaseModel):
+    category: str = "law"
+    permissions: int = 0
+    subdirs: Optional[List[str]] = None  # 指定子目录, None=扫描全部
+
+
+@app.post("/api/knowledge/batch_import")
+async def batch_import_knowledge(request: BatchImportRequest = BatchImportRequest()):
+    """批量扫描 knowledge_files/ 目录（含子目录），将所有支持的文件导入向量库。
+
+    支持直接将文件放入 knowledge_files/ 下的任意子目录，一键入库。
+    """
+    scan_dirs = []
+    if request.subdirs:
+        for sub in request.subdirs:
+            d = os.path.join(KnowledgeFilePath, sub)
+            if os.path.isdir(d):
+                scan_dirs.append(d)
+    else:
+        scan_dirs.append(KnowledgeFilePath)
+
+    supported_exts = {".pdf", ".docx", ".txt"}
+    files_found = []
+    for scan_dir in scan_dirs:
+        for root, _dirs, filenames in os.walk(scan_dir):
+            for fname in filenames:
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in supported_exts:
+                    files_found.append({
+                        "filename": fname,
+                        "filepath": os.path.join(root, fname),
+                        "ext": ext,
+                        "subdir": os.path.relpath(root, KnowledgeFilePath),
+                    })
+
+    if not files_found:
+        return {
+            "status": "warning",
+            "message": "未找到可导入的文件",
+            "scanned_dirs": [os.path.relpath(d, KnowledgeFilePath) for d in scan_dirs],
+            "results": [],
+        }
+
+    results = []
+    success_count = 0
+    fail_count = 0
+
+    for file_info in files_found:
+        try:
+            source = file_info["filepath"]
+            file_type = file_info["ext"]
+            subdir = file_info["subdir"]
+
+            state: VectorDBState = {
+                "operation": "add",
+                "filename": file_info["filename"],
+                "content": "",
+                "file_id": "",
+                "source": source,
+                "file_type": file_type,
+                "chunk_index": 0,
+                "total_chunks": 0,
+                "create_at": datetime.now(),
+                "category": f"{request.category}/{subdir}" if subdir != "." else request.category,
+                "permissions": request.permissions,
+                "results": [],
+                "success": False,
+                "message": "",
+                "steps": [],
+            }
+
+            workflow = create_vectordb_workflow()
+            result = workflow.invoke(state)
+
+            results.append({
+                "filename": file_info["filename"],
+                "subdir": subdir,
+                "success": result["success"],
+                "message": result["message"],
+            })
+
+            if result["success"]:
+                success_count += 1
+            else:
+                fail_count += 1
+
+        except Exception as e:
+            fail_count += 1
+            results.append({
+                "filename": file_info["filename"],
+                "subdir": file_info["subdir"],
+                "success": False,
+                "message": str(e),
+            })
+
+    return {
+        "status": "success" if fail_count == 0 else "partial",
+        "message": f"扫描完成: {success_count} 个成功, {fail_count} 个失败, 共 {len(files_found)} 个文件",
+        "total": len(files_found),
+        "success_count": success_count,
+        "fail_count": fail_count,
+        "results": results,
+    }
+
+
+@app.get("/api/knowledge/scan")
+async def scan_knowledge_files():
+    """扫描 knowledge_files/ 目录结构，列出所有可导入文件（不执行导入）"""
+    supported_exts = {".pdf", ".docx", ".txt"}
+    files = []
+    for root, _dirs, filenames in os.walk(KnowledgeFilePath):
+        for fname in filenames:
+            ext = os.path.splitext(fname)[1].lower()
+            if ext in supported_exts:
+                full_path = os.path.join(root, fname)
+                files.append({
+                    "filename": fname,
+                    "subdir": os.path.relpath(root, KnowledgeFilePath),
+                    "ext": ext,
+                    "size_kb": round(os.path.getsize(full_path) / 1024, 1),
+                })
+
+    return {
+        "knowledge_dir": KnowledgeFilePath,
+        "total": len(files),
+        "files": files,
+    }
+
+
 @app.get("/api/vectordb/list", response_model=VectorDBResponse)
 async def list_documents(limit: int = 10):
     """列出向量库中的文档"""
