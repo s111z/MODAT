@@ -820,6 +820,43 @@ async def download_knowledge_file(subdir: str = ".", filename: str = ""):
     )
 
 
+@app.get("/api/knowledge/preview")
+async def preview_knowledge_file(subdir: str = ".", filename: str = ""):
+    """预览知识库文件（使用正确的 MIME 类型，浏览器可内联展示 PDF）"""
+    if not filename:
+        raise HTTPException(status_code=400, detail="缺少文件名")
+
+    safe_subdir = os.path.normpath(subdir)
+    safe_filename = os.path.basename(filename)
+
+    if ".." in safe_subdir:
+        raise HTTPException(status_code=400, detail="非法路径")
+
+    if safe_subdir == ".":
+        file_path = os.path.join(KnowledgeFilePath, safe_filename)
+    else:
+        file_path = os.path.join(KnowledgeFilePath, safe_subdir, safe_filename)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    ext = os.path.splitext(safe_filename)[1].lower()
+    mime_map = {
+        ".pdf": "application/pdf",
+        ".txt": "text/plain; charset=utf-8",
+        ".doc": "application/msword",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    media_type = mime_map.get(ext, "application/octet-stream")
+
+    return FileResponse(
+        path=file_path,
+        filename=safe_filename,
+        media_type=media_type,
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{safe_filename}"}
+    )
+
+
 @app.get("/api/vectordb/list", response_model=VectorDBResponse)
 async def list_documents(limit: int = 10):
     """列出向量库中的文档"""

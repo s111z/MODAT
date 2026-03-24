@@ -62,12 +62,21 @@
         <GlobalSearch v-else-if="sidebarActive === 'search'" />
 
         <!-- 知识库管理 -->
-        <KnowledgeManager v-else-if="sidebarActive === 'knowledge'" />
+        <KnowledgeManager
+          v-else-if="sidebarActive === 'knowledge'"
+          @file-selected="onFileSelected"
+        />
       </div>
 
-      <!-- 右侧面板：始终显示聊天界面 -->
+      <!-- 右侧面板 -->
       <div class="right-panel">
-        <ChatInterface />
+        <!-- 知识库模式下显示文件预览 -->
+        <FilePreview
+          v-if="sidebarActive === 'knowledge' && selectedFile"
+          :file="selectedFile"
+        />
+        <!-- 其他模式显示聊天界面 -->
+        <ChatInterface v-else />
       </div>
     </div>
   </div>
@@ -82,6 +91,7 @@ import DocumentReviewPanel from '@/components/DocumentReviewPanel.vue'
 import HistoryList from '@/components/HistoryList.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
 import KnowledgeManager from '@/components/KnowledgeManager.vue'
+import FilePreview from '@/components/FilePreview.vue'
 
 export default {
   name: 'Home',
@@ -92,11 +102,13 @@ export default {
     DocumentReviewPanel,
     HistoryList,
     GlobalSearch,
-    KnowledgeManager
+    KnowledgeManager,
+    FilePreview
   },
   data() {
     return {
-      workflowSteps: []
+      workflowSteps: [],
+      selectedFile: null
     }
   },
   computed: {
@@ -107,6 +119,14 @@ export default {
 
     setSidebar(panel) {
       this.SET_SIDEBAR_ACTIVE(panel)
+      // 切换到非知识库模式时清空选中文件
+      if (panel !== 'knowledge') {
+        this.selectedFile = null
+      }
+    },
+
+    onFileSelected(file) {
+      this.selectedFile = file
     }
   },
   mounted() {

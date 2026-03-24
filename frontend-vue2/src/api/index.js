@@ -320,6 +320,17 @@ class APIClient {
   }
 
   /**
+   * 获取知识库文件预览链接（浏览器内联展示）
+   * @param {string} subdir - 子目录
+   * @param {string} filename - 文件名
+   * @returns {string} 预览URL
+   */
+  getKnowledgePreviewUrl(subdir, filename) {
+    const params = new URLSearchParams({ subdir, filename })
+    return `${this.baseUrl}/api/knowledge/preview?${params.toString()}`
+  }
+
+  /**
    * 健康检查
    * @returns {Promise<Object>} { status: string }
    */

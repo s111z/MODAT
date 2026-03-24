@@ -169,7 +169,7 @@
       </div>
     </template>
 
-    <!-- ===== Tab 2: 知识库源文件浏览 ===== -->
+    <!-- ===== Tab 2: 知识库源文件浏览（左侧选择） ===== -->
     <template v-if="activeTab === 'files'">
       <div class="files-section" v-loading="filesLoading">
         <div v-if="!filesLoading && Object.keys(fileTree).length === 0" class="empty-state">
@@ -195,23 +195,16 @@
                 <div
                   v-for="file in files"
                   :key="file.filename"
-                  class="file-row"
+                  :class="['file-row', { selected: isFileSelected(category, file.filename) }]"
+                  @click="selectFile(category, file)"
                 >
                   <div class="file-info">
                     <i :class="getFileIcon(file.ext)" class="file-type-icon"></i>
                     <span class="file-name" :title="file.filename">{{ file.filename }}</span>
                   </div>
-                  <div class="file-actions">
-                    <el-tag size="mini" class="file-size">{{ file.size_kb }} KB</el-tag>
-                    <el-tag size="mini" :type="getExtTagType(file.ext)">{{ file.ext }}</el-tag>
-                    <el-button
-                      type="text"
-                      size="mini"
-                      icon="el-icon-download"
-                      @click="downloadFile(category, file.filename)"
-                    >
-                      下载
-                    </el-button>
+                  <div class="file-meta-inline">
+                    <span class="file-size-text">{{ file.size_kb }}KB</span>
+                    <el-tag size="mini" :type="getExtTagType(file.ext)" class="ext-tag">{{ file.ext }}</el-tag>
                   </div>
                 </div>
               </div>
@@ -248,7 +241,8 @@ export default {
       // 源文件浏览相关
       fileTree: {},
       filesLoading: false,
-      expandedCategories: {}
+      expandedCategories: {},
+      selectedFile: null // { category, filename, ext, size_kb }
     }
   },
   computed: {
@@ -281,7 +275,6 @@ export default {
       try {
         const res = await apiClient.getKnowledgeTree()
         this.fileTree = res.tree
-        // 默认全部展开
         Object.keys(this.fileTree).forEach(k => {
           this.$set(this.expandedCategories, k, true)
         })
@@ -294,6 +287,24 @@ export default {
 
     toggleCategory(category) {
       this.$set(this.expandedCategories, category, !this.expandedCategories[category])
+    },
+
+    selectFile(category, file) {
+      this.selectedFile = { category, ...file }
+      // 通知 Home.vue 展示预览
+      this.$emit('file-selected', {
+        category,
+        filename: file.filename,
+        ext: file.ext,
+        size_kb: file.size_kb,
+        subdir: category === '根目录' ? '.' : category
+      })
+    },
+
+    isFileSelected(category, filename) {
+      return this.selectedFile &&
+        this.selectedFile.category === category &&
+        this.selectedFile.filename === filename
     },
 
     getFileIcon(ext) {
@@ -314,12 +325,6 @@ export default {
         '.txt': ''
       }
       return types[ext] || 'info'
-    },
-
-    downloadFile(category, filename) {
-      const subdir = category === '根目录' ? '.' : category
-      const url = apiClient.getKnowledgeDownloadUrl(subdir, filename)
-      window.open(url, '_blank')
     },
 
     // ===== 原有方法 =====
@@ -689,7 +694,7 @@ export default {
 .files-section {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 24px;
+  padding: 12px 16px;
 }
 
 .file-tree {
@@ -708,7 +713,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 10px 12px;
   background: #f5f7fa;
   cursor: pointer;
   user-select: none;
@@ -725,14 +730,17 @@ export default {
 }
 
 .category-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #303133;
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .file-count {
-  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .category-files {
@@ -743,8 +751,9 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px 8px 40px;
+  padding: 8px 12px 8px 32px;
   border-bottom: 1px solid #f2f3f5;
+  cursor: pointer;
   transition: background 0.15s;
 }
 
@@ -753,13 +762,19 @@ export default {
 }
 
 .file-row:hover {
-  background: #f5f7fa;
+  background: #ecf5ff;
+}
+
+.file-row.selected {
+  background: #d9ecff;
+  border-left: 3px solid #409eff;
+  padding-left: 29px;
 }
 
 .file-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
   min-width: 0;
 }
@@ -778,22 +793,27 @@ export default {
   white-space: nowrap;
 }
 
-.file-actions {
+.file-meta-inline {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
-.file-size {
-  font-size: 12px;
+.file-size-text {
+  font-size: 11px;
+  color: #909399;
+}
+
+.ext-tag {
+  transform: scale(0.85);
 }
 
 /* 展开/收起动画 */
 .slide-enter-active,
 .slide-leave-active {
   transition: all 0.25s ease;
-  max-height: 1000px;
+  max-height: 2000px;
   overflow: hidden;
 }
 
