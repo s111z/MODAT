@@ -1,0 +1,227 @@
+"""
+知识问答工作流节点函数
+
+每个节点函数接收QAState，调用对应Agent，更新并返回state。
+"""
+
+from typing import Dict, Any
+from .qa_state import QAState
+
+
+# ===== Agent实例(延迟初始化) =====
+_desensitize_agent = None
+_intent_agent = None
+_query_processor = None
+_knowledge_agent = None
+_web_search_agent = None
+_conflict_agent = None
+_response_agent = None
+
+
+def _get_desensitize_agent():
+    global _desensitize_agent
+    if _desensitize_agent is None:
+        from agents.desensitize_agent import DesensitizeAgent
+        _desensitize_agent = DesensitizeAgent()
+    return _desensitize_agent
+
+
+def _get_intent_agent():
+    global _intent_agent
+    if _intent_agent is None:
+        from agents.intent_agent import IntentAgent
+        _intent_agent = IntentAgent()
+    return _intent_agent
+
+
+def _get_query_processor():
+    global _query_processor
+    if _query_processor is None:
+        from agents.query_processor_agent import QueryProcessorAgent
+        _query_processor = QueryProcessorAgent()
+    return _query_processor
+
+
+def _get_knowledge_agent():
+    global _knowledge_agent
+    if _knowledge_agent is None:
+        from agents.knowledge_expert_agent import KnowledgeExpertAgent
+        _knowledge_agent = KnowledgeExpertAgent()
+    return _knowledge_agent
+
+
+def _get_web_search_agent():
+    global _web_search_agent
+    if _web_search_agent is None:
+        from agents.web_search_agent import WebSearchAgent
+        _web_search_agent = WebSearchAgent()
+    return _web_search_agent
+
+
+def _get_conflict_agent():
+    global _conflict_agent
+    if _conflict_agent is None:
+        from agents.conflict_resolution_agent import ConflictResolutionAgent
+        _conflict_agent = ConflictResolutionAgent()
+    return _conflict_agent
+
+
+def _get_response_agent():
+    global _response_agent
+    if _response_agent is None:
+        from agents.response_generator_agent import ResponseGeneratorAgent
+        _response_agent = ResponseGeneratorAgent()
+    return _response_agent
+
+
+# ===== 节点函数 =====
+
+def node_desensitize(state: QAState) -> Dict[str, Any]:
+    """信息脱敏节点"""
+    state["steps"].append("正在进行信息脱敏...")
+
+    agent = _get_desensitize_agent()
+    desensitized, mapping = agent.desensitize(state["query"])
+
+    state["desensitized_query"] = desensitized
+    state["pii_mapping"] = mapping
+
+    if mapping:
+        state["steps"].append(f"检测到 {len(mapping)} 个敏感信息已脱敏")
+    else:
+        state["steps"].append("未检测到敏感信息")
+
+    return state
+
+
+def node_intent_recognize(state: QAState) -> Dict[str, Any]:
+    """意图识别节点"""
+    state["steps"].append("正在识别用户意图...")
+
+    agent = _get_intent_agent()
+    result = agent.classify(state["desensitized_query"])
+
+    state["intent"] = result.get("intent", "knowledge_qa")
+    state["deep_mode"] = result.get("deep_mode", False)
+
+    mode_text = "深度思考" if state["deep_mode"] else "快速回答"
+    state["steps"].append(f"意图: {state['intent']}, 模式: {mode_text}")
+
+    return state
+
+
+def node_query_process(state: QAState) -> Dict[str, Any]:
+    """Query处理节点"""
+    state["steps"].append("正在处理查询...")
+
+    agent = _get_query_processor()
+
+    if state["deep_mode"]:
+        result = agent.decompose(state["desensitized_query"])
+    else:
+        result = agent.rewrite(state["desensitized_query"])
+
+    state["processed_queries"] = result.get("queries", [state["desensitized_query"]])
+    state["query_type"] = result.get("type", "simple")
+
+    state["steps"].append(
+        f"Query处理完成: {state['query_type']}, "
+        f"共{len(state['processed_queries'])}个查询"
+    )
+
+    return state
+
+
+def node_simple_qa(state: QAState) -> Dict[str, Any]:
+    """简单问答节点 - 仅查询知识库"""
+    state["steps"].append("正在检索知识库...")
+
+    agent = _get_knowledge_agent()
+    all_results = []
+    for query in state["processed_queries"]:
+        results = agent.search(query, top_k=3)
+        all_results.extend(results)
+
+    state["knowledge_results"] = all_results
+    state["resolved_context"] = agent.format_context(all_results)
+    state["conflict_found"] = False
+
+    state["steps"].append(f"知识库检索完成，找到 {len(all_results)} 条结果")
+    return state
+
+
+def node_deep_qa(state: QAState) -> Dict[str, Any]:
+    """深度问答节点 - 并行查询知识库+网络"""
+    state["steps"].append("正在并行检索知识库和网络...")
+
+    kb_agent = _get_knowledge_agent()
+    web_agent = _get_web_search_agent()
+
+    # 知识库检索
+    kb_results = []
+    for query in state["processed_queries"]:
+        results = kb_agent.search(query, top_k=3)
+        kb_results.extend(results)
+
+    # 网络搜索
+    web_results = []
+    for query in state["processed_queries"]:
+        results = web_agent.search(query, max_results=3)
+        web_results.extend(results)
+
+    state["knowledge_results"] = kb_results
+    state["web_results"] = web_results
+
+    state["steps"].append(
+        f"多源检索完成: 知识库 {len(kb_results)} 条, 网络 {len(web_results)} 条"
+    )
+    return state
+
+
+def node_conflict_resolve(state: QAState) -> Dict[str, Any]:
+    """冲突裁决节点"""
+    state["steps"].append("正在进行多源信息裁决...")
+
+    agent = _get_conflict_agent()
+    result = agent.resolve(
+        query=state["desensitized_query"],
+        knowledge_results=state["knowledge_results"],
+        web_results=state.get("web_results", []),
+    )
+
+    state["resolved_context"] = result.get("resolved_context", "")
+    state["conflict_found"] = result.get("conflict_found", False)
+    state["conflict_summary"] = result.get("summary", "")
+
+    if state["conflict_found"]:
+        state["steps"].append(f"发现信息冲突，已完成裁决: {state['conflict_summary']}")
+    else:
+        state["steps"].append(f"多源信息一致: {state['conflict_summary']}")
+
+    return state
+
+
+def node_generate_response(state: QAState) -> Dict[str, Any]:
+    """回复生成节点"""
+    state["steps"].append("正在生成回复...")
+
+    agent = _get_response_agent()
+    result = agent.generate(
+        query=state["desensitized_query"],
+        context=state.get("resolved_context", ""),
+        intent=state["intent"],
+        history=state.get("history", []),
+    )
+
+    response = result.get("response", "抱歉，未能生成回复")
+
+    # 还原脱敏信息
+    mapping = state.get("pii_mapping", {})
+    if mapping:
+        from agents.desensitize_agent import DesensitizeAgent
+        response = DesensitizeAgent.restore(response, mapping)
+
+    state["response"] = response
+    state["steps"].append("回复生成完成")
+
+    return state
