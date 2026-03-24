@@ -12,7 +12,7 @@ if app_dir_str not in sys.path:
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import json
@@ -761,6 +761,63 @@ async def scan_knowledge_files():
         "total": len(files),
         "files": files,
     }
+
+
+@app.get("/api/knowledge/tree")
+async def knowledge_file_tree():
+    """以树形结构返回知识库目录"""
+    supported_exts = {".pdf", ".docx", ".doc", ".txt"}
+    tree = {}
+
+    for root, _dirs, filenames in os.walk(KnowledgeFilePath):
+        rel_dir = os.path.relpath(root, KnowledgeFilePath)
+        category = rel_dir if rel_dir != "." else "根目录"
+
+        files_in_dir = []
+        for fname in filenames:
+            if fname.startswith("."):
+                continue
+            ext = os.path.splitext(fname)[1].lower()
+            if ext in supported_exts:
+                full_path = os.path.join(root, fname)
+                files_in_dir.append({
+                    "filename": fname,
+                    "ext": ext,
+                    "size_kb": round(os.path.getsize(full_path) / 1024, 1),
+                })
+
+        if files_in_dir:
+            tree[category] = files_in_dir
+
+    return {"tree": tree}
+
+
+@app.get("/api/knowledge/download")
+async def download_knowledge_file(subdir: str = ".", filename: str = ""):
+    """下载知识库文件"""
+    if not filename:
+        raise HTTPException(status_code=400, detail="缺少文件名")
+
+    # 防止路径穿越攻击
+    safe_subdir = os.path.normpath(subdir)
+    safe_filename = os.path.basename(filename)
+
+    if ".." in safe_subdir:
+        raise HTTPException(status_code=400, detail="非法路径")
+
+    if safe_subdir == ".":
+        file_path = os.path.join(KnowledgeFilePath, safe_filename)
+    else:
+        file_path = os.path.join(KnowledgeFilePath, safe_subdir, safe_filename)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    return FileResponse(
+        path=file_path,
+        filename=safe_filename,
+        media_type="application/octet-stream"
+    )
 
 
 @app.get("/api/vectordb/list", response_model=VectorDBResponse)

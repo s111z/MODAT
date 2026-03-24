@@ -278,6 +278,47 @@ class APIClient {
 
   // ========== 健康检查 ==========
 
+  // ========== 知识库文件浏览接口 ==========
+
+  /**
+   * 获取知识库文件树（按分类目录组织）
+   * @returns {Promise<Object>} { tree: { category: [{ filename, ext, size_kb }] } }
+   */
+  async getKnowledgeTree() {
+    try {
+      const response = await axios.get(`${this.baseUrl}/api/knowledge/tree`)
+      return response.data
+    } catch (error) {
+      const message = error.response?.data?.detail || error.message
+      throw new Error(`获取知识库文件树失败: ${message}`)
+    }
+  }
+
+  /**
+   * 扫描知识库文件列表（扁平列表）
+   * @returns {Promise<Object>} { knowledge_dir, total, files }
+   */
+  async scanKnowledgeFiles() {
+    try {
+      const response = await axios.get(`${this.baseUrl}/api/knowledge/scan`)
+      return response.data
+    } catch (error) {
+      const message = error.response?.data?.detail || error.message
+      throw new Error(`扫描知识库文件失败: ${message}`)
+    }
+  }
+
+  /**
+   * 获取知识库文件下载链接
+   * @param {string} subdir - 子目录
+   * @param {string} filename - 文件名
+   * @returns {string} 下载URL
+   */
+  getKnowledgeDownloadUrl(subdir, filename) {
+    const params = new URLSearchParams({ subdir, filename })
+    return `${this.baseUrl}/api/knowledge/download?${params.toString()}`
+  }
+
   /**
    * 健康检查
    * @returns {Promise<Object>} { status: string }

@@ -6,184 +6,328 @@
       <p>管理向量数据库中的文档，支持上传、搜索和删除</p>
     </div>
 
-    <!-- 上传区域 -->
-    <div class="upload-section">
-      <input
-        ref="fileInput"
-        type="file"
-        style="display: none"
-        accept=".pdf"
-        @change="handleFileUpload"
-        :disabled="isUploading"
-      />
-
-      <el-button
-        type="primary"
-        @click="$refs.fileInput.click()"
-        :loading="isUploading"
-        :disabled="isUploading"
-        class="upload-btn"
+    <!-- Tab 切换 -->
+    <div class="tab-bar">
+      <div
+        :class="['tab-item', { active: activeTab === 'vectordb' }]"
+        @click="activeTab = 'vectordb'"
       >
-        <i v-if="!isUploading" class="el-icon-upload el-icon--left"></i>
-        {{ isUploading ? '处理中...' : '上传PDF到知识库' }}
-      </el-button>
-
-      <!-- 上传状态显示 -->
-      <el-alert
-        v-if="uploadStatus.type"
-        :type="uploadStatus.type === 'success' ? 'success' : 'error'"
-        :title="uploadStatus.message"
-        :closable="true"
-        @close="uploadStatus.type = ''"
-        class="upload-status"
+        向量库文档
+      </div>
+      <div
+        :class="['tab-item', { active: activeTab === 'files' }]"
+        @click="switchToFiles"
       >
-        <div v-if="processingSteps.length > 0" class="processing-steps">
-          <p v-for="(step, index) in processingSteps" :key="index" class="step-text">
-            • {{ step }}
-          </p>
-        </div>
-      </el-alert>
+        知识库源文件
+      </div>
     </div>
 
-    <!-- 搜索区域 -->
-    <div class="search-section">
-      <div class="search-bar">
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索知识库内容..."
-          :disabled="isSearching"
-          @keyup.enter.native="handleSearch"
-          class="search-input"
-        >
-          <el-button
-            slot="append"
-            icon="el-icon-search"
-            @click="handleSearch"
-            :loading="isSearching"
-          ></el-button>
-        </el-input>
+    <!-- ===== Tab 1: 向量库文档（原有功能） ===== -->
+    <template v-if="activeTab === 'vectordb'">
+      <!-- 上传区域 -->
+      <div class="upload-section">
+        <input
+          ref="fileInput"
+          type="file"
+          style="display: none"
+          accept=".pdf"
+          @change="handleFileUpload"
+          :disabled="isUploading"
+        />
 
         <el-button
-          icon="el-icon-refresh"
-          @click="loadDocuments"
-          :loading="isLoading"
-          title="刷新列表"
-          class="refresh-btn"
-        ></el-button>
-      </div>
-
-      <div v-if="searchResults.length > 0" class="search-info">
-        找到 {{ searchResults.length }} 个相关结果
-        <el-button
-          type="text"
-          size="mini"
-          @click="clearSearch"
-          class="clear-btn"
+          type="primary"
+          @click="$refs.fileInput.click()"
+          :loading="isUploading"
+          :disabled="isUploading"
+          class="upload-btn"
         >
-          清除搜索
+          <i v-if="!isUploading" class="el-icon-upload el-icon--left"></i>
+          {{ isUploading ? '处理中...' : '上传PDF到知识库' }}
         </el-button>
-      </div>
-    </div>
 
-    <!-- 文档列表 -->
-    <div class="documents-section" v-loading="isLoading">
-      <div v-if="!isLoading && displayedDocuments.length === 0" class="empty-state">
-        <i class="el-icon-document empty-icon"></i>
-        <p>{{ searchQuery ? '未找到匹配的文档' : '知识库为空，请上传文档' }}</p>
-      </div>
-
-      <div v-else class="documents-list">
-        <el-card
-          v-for="doc in displayedDocuments"
-          :key="doc.id"
-          class="document-card"
-          shadow="hover"
+        <!-- 上传状态显示 -->
+        <el-alert
+          v-if="uploadStatus.type"
+          :type="uploadStatus.type === 'success' ? 'success' : 'error'"
+          :title="uploadStatus.message"
+          :closable="true"
+          @close="uploadStatus.type = ''"
+          class="upload-status"
         >
-          <div slot="header" class="card-header">
-            <div class="header-left">
-              <i class="el-icon-document document-icon"></i>
-              <span class="document-title">
-                {{ doc.metadata && doc.metadata.source ? doc.metadata.source : doc.id }}
-              </span>
-            </div>
-            <el-button
-              type="danger"
-              icon="el-icon-delete"
-              size="mini"
-              circle
-              @click="handleDelete(doc.id)"
-              class="delete-btn"
-            ></el-button>
+          <div v-if="processingSteps.length > 0" class="processing-steps">
+            <p v-for="(step, index) in processingSteps" :key="index" class="step-text">
+              • {{ step }}
+            </p>
           </div>
-
-          <div class="card-content">
-            <p class="document-content">{{ doc.content }}</p>
-            <div class="metadata-tags">
-              <el-tag
-                v-if="doc.metadata && doc.metadata.category"
-                size="mini"
-                type="info"
-              >
-                {{ doc.metadata.category }}
-              </el-tag>
-              <el-tag
-                v-if="doc.metadata && doc.metadata.chunk_index !== undefined"
-                size="mini"
-              >
-                Chunk {{ doc.metadata.chunk_index + 1 }}/{{ doc.metadata.total_chunks }}
-              </el-tag>
-              <el-tag
-                v-if="doc.metadata && doc.metadata.file_type"
-                size="mini"
-                type="success"
-              >
-                {{ doc.metadata.file_type }}
-              </el-tag>
-            </div>
-          </div>
-        </el-card>
+        </el-alert>
       </div>
-    </div>
 
-    <!-- 底部统计 -->
-    <div class="footer">
-      共 {{ documents.length }} 个文档块
-    </div>
+      <!-- 搜索区域 -->
+      <div class="search-section">
+        <div class="search-bar">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索知识库内容..."
+            :disabled="isSearching"
+            @keyup.enter.native="handleSearch"
+            class="search-input"
+          >
+            <el-button
+              slot="append"
+              icon="el-icon-search"
+              @click="handleSearch"
+              :loading="isSearching"
+            ></el-button>
+          </el-input>
+
+          <el-button
+            icon="el-icon-refresh"
+            @click="loadDocuments"
+            :loading="isLoading"
+            title="刷新列表"
+            class="refresh-btn"
+          ></el-button>
+        </div>
+
+        <div v-if="searchResults.length > 0" class="search-info">
+          找到 {{ searchResults.length }} 个相关结果
+          <el-button
+            type="text"
+            size="mini"
+            @click="clearSearch"
+            class="clear-btn"
+          >
+            清除搜索
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 文档列表 -->
+      <div class="documents-section" v-loading="isLoading">
+        <div v-if="!isLoading && displayedDocuments.length === 0" class="empty-state">
+          <i class="el-icon-document empty-icon"></i>
+          <p>{{ searchQuery ? '未找到匹配的文档' : '知识库为空，请上传文档' }}</p>
+        </div>
+
+        <div v-else class="documents-list">
+          <el-card
+            v-for="doc in displayedDocuments"
+            :key="doc.id"
+            class="document-card"
+            shadow="hover"
+          >
+            <div slot="header" class="card-header">
+              <div class="header-left">
+                <i class="el-icon-document document-icon"></i>
+                <span class="document-title">
+                  {{ doc.metadata && doc.metadata.source ? doc.metadata.source : doc.id }}
+                </span>
+              </div>
+              <el-button
+                type="danger"
+                icon="el-icon-delete"
+                size="mini"
+                circle
+                @click="handleDelete(doc.id)"
+                class="delete-btn"
+              ></el-button>
+            </div>
+
+            <div class="card-content">
+              <p class="document-content">{{ doc.content }}</p>
+              <div class="metadata-tags">
+                <el-tag
+                  v-if="doc.metadata && doc.metadata.category"
+                  size="mini"
+                  type="info"
+                >
+                  {{ doc.metadata.category }}
+                </el-tag>
+                <el-tag
+                  v-if="doc.metadata && doc.metadata.chunk_index !== undefined"
+                  size="mini"
+                >
+                  Chunk {{ doc.metadata.chunk_index + 1 }}/{{ doc.metadata.total_chunks }}
+                </el-tag>
+                <el-tag
+                  v-if="doc.metadata && doc.metadata.file_type"
+                  size="mini"
+                  type="success"
+                >
+                  {{ doc.metadata.file_type }}
+                </el-tag>
+              </div>
+            </div>
+          </el-card>
+        </div>
+      </div>
+
+      <!-- 底部统计 -->
+      <div class="footer">
+        共 {{ documents.length }} 个文档块
+      </div>
+    </template>
+
+    <!-- ===== Tab 2: 知识库源文件浏览 ===== -->
+    <template v-if="activeTab === 'files'">
+      <div class="files-section" v-loading="filesLoading">
+        <div v-if="!filesLoading && Object.keys(fileTree).length === 0" class="empty-state">
+          <i class="el-icon-folder empty-icon"></i>
+          <p>知识库目录为空</p>
+        </div>
+
+        <div v-else class="file-tree">
+          <div
+            v-for="(files, category) in fileTree"
+            :key="category"
+            class="category-group"
+          >
+            <div class="category-header" @click="toggleCategory(category)">
+              <i :class="expandedCategories[category] ? 'el-icon-arrow-down' : 'el-icon-arrow-right'"></i>
+              <i class="el-icon-folder category-icon"></i>
+              <span class="category-name">{{ category }}</span>
+              <el-tag size="mini" type="info" class="file-count">{{ files.length }}</el-tag>
+            </div>
+
+            <transition name="slide">
+              <div v-show="expandedCategories[category]" class="category-files">
+                <div
+                  v-for="file in files"
+                  :key="file.filename"
+                  class="file-row"
+                >
+                  <div class="file-info">
+                    <i :class="getFileIcon(file.ext)" class="file-type-icon"></i>
+                    <span class="file-name" :title="file.filename">{{ file.filename }}</span>
+                  </div>
+                  <div class="file-actions">
+                    <el-tag size="mini" class="file-size">{{ file.size_kb }} KB</el-tag>
+                    <el-tag size="mini" :type="getExtTagType(file.ext)">{{ file.ext }}</el-tag>
+                    <el-button
+                      type="text"
+                      size="mini"
+                      icon="el-icon-download"
+                      @click="downloadFile(category, file.filename)"
+                    >
+                      下载
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部统计 -->
+      <div class="footer">
+        共 {{ totalFileCount }} 个源文件，{{ Object.keys(fileTree).length }} 个分类
+      </div>
+    </template>
   </div>
 </template>
 
 <script>
 import { mapState, mapActions } from 'vuex'
 import mockService from '@/mock'
+import apiClient from '@/api'
 
 export default {
   name: 'KnowledgeManager',
   data() {
     return {
+      activeTab: 'vectordb',
       searchQuery: '',
       isUploading: false,
       uploadStatus: {
         type: '',
         message: ''
       },
-      processingSteps: []
+      processingSteps: [],
+      // 源文件浏览相关
+      fileTree: {},
+      filesLoading: false,
+      expandedCategories: {}
     }
   },
   computed: {
     ...mapState('knowledge', ['documents', 'isLoading', 'searchResults', 'isSearching']),
     displayedDocuments() {
       return this.searchResults.length > 0 ? this.searchResults : this.documents
+    },
+    totalFileCount() {
+      let count = 0
+      Object.values(this.fileTree).forEach(files => {
+        count += files.length
+      })
+      return count
     }
   },
   methods: {
     ...mapActions('knowledge', ['fetchDocuments', 'searchDocuments', 'deleteDocument']),
 
+    // ===== 源文件浏览方法 =====
+
+    async switchToFiles() {
+      this.activeTab = 'files'
+      if (Object.keys(this.fileTree).length === 0) {
+        await this.loadFileTree()
+      }
+    },
+
+    async loadFileTree() {
+      this.filesLoading = true
+      try {
+        const res = await apiClient.getKnowledgeTree()
+        this.fileTree = res.tree
+        // 默认全部展开
+        Object.keys(this.fileTree).forEach(k => {
+          this.$set(this.expandedCategories, k, true)
+        })
+      } catch (e) {
+        this.$message.error('加载知识库文件失败: ' + e.message)
+      } finally {
+        this.filesLoading = false
+      }
+    },
+
+    toggleCategory(category) {
+      this.$set(this.expandedCategories, category, !this.expandedCategories[category])
+    },
+
+    getFileIcon(ext) {
+      const icons = {
+        '.pdf': 'el-icon-document',
+        '.doc': 'el-icon-tickets',
+        '.docx': 'el-icon-tickets',
+        '.txt': 'el-icon-notebook-2'
+      }
+      return icons[ext] || 'el-icon-document'
+    },
+
+    getExtTagType(ext) {
+      const types = {
+        '.pdf': 'danger',
+        '.doc': 'primary',
+        '.docx': 'primary',
+        '.txt': ''
+      }
+      return types[ext] || 'info'
+    },
+
+    downloadFile(category, filename) {
+      const subdir = category === '根目录' ? '.' : category
+      const url = apiClient.getKnowledgeDownloadUrl(subdir, filename)
+      window.open(url, '_blank')
+    },
+
+    // ===== 原有方法 =====
+
     async loadDocuments() {
       if (mockService.isEnabled()) {
-        // 从 Mock 服务加载文档
         try {
           const knowledgeData = mockService.getKnowledgeData()
-          // 转换文档格式
           const mockDocuments = knowledgeData.documents.map(doc => ({
             id: doc.id,
             content: `${doc.title} - ${doc.category}`,
@@ -205,7 +349,6 @@ export default {
           this.$message.error('加载文档列表失败: ' + error.message)
         }
       } else {
-        // 真实 API
         try {
           await this.fetchDocuments(50)
         } catch (error) {
@@ -225,7 +368,6 @@ export default {
 
       try {
         if (mockService.isEnabled()) {
-          // Mock 模式
           this.processingSteps.push('正在上传文件...')
           await new Promise(resolve => setTimeout(resolve, 500))
 
@@ -233,7 +375,7 @@ export default {
           await new Promise(resolve => setTimeout(resolve, 500))
 
           this.processingSteps.push('正在添加到知识库...')
-          const result = await mockService.uploadDocument(file, {
+          await mockService.uploadDocument(file, {
             category: '技术文档',
             tags: ['新上传']
           })
@@ -243,10 +385,8 @@ export default {
             message: '文件已成功添加到知识库（Mock）'
           }
 
-          // 刷新列表
           await this.loadDocuments()
         } else {
-          // 真实 API
           this.processingSteps.push('正在上传文件...')
           const uploadResponse = await this.$store.dispatch('knowledge/uploadAndAddDocument', {
             file,
@@ -272,7 +412,6 @@ export default {
         }
       } finally {
         this.isUploading = false
-        // 清空文件输入
         if (this.$refs.fileInput) {
           this.$refs.fileInput.value = ''
         }
@@ -286,12 +425,10 @@ export default {
       }
 
       if (mockService.isEnabled()) {
-        // Mock 搜索
         try {
           this.$store.commit('knowledge/SET_SEARCHING', true)
           const results = await mockService.search(this.searchQuery)
 
-          // 转换搜索结果
           const searchResults = results.map(result => ({
             id: result.id,
             content: result.excerpt,
@@ -310,7 +447,6 @@ export default {
           this.$message.error('搜索失败: ' + error.message)
         }
       } else {
-        // 真实 API
         try {
           await this.searchDocuments(this.searchQuery)
           this.$message.success(`找到 ${this.searchResults.length} 个相关结果`)
@@ -329,13 +465,10 @@ export default {
         })
 
         if (mockService.isEnabled()) {
-          // Mock 删除
           await mockService.deleteDocument(docId)
           this.$message.success('删除成功（Mock）')
-          // 刷新列表
           await this.loadDocuments()
         } else {
-          // 真实 API
           await this.deleteDocument(docId)
           this.$message.success('删除成功')
         }
@@ -383,6 +516,34 @@ export default {
   font-size: 14px;
   color: #6b7280;
   margin: 0;
+}
+
+/* Tab 切换栏 */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f9fafb;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 12px 0;
+  font-size: 14px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-item:hover {
+  color: #3b82f6;
+}
+
+.tab-item.active {
+  color: #3b82f6;
+  font-weight: 600;
+  border-bottom-color: #3b82f6;
 }
 
 /* 上传区域 */
@@ -446,7 +607,7 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  height: 200px;
   color: #9ca3af;
 }
 
@@ -522,6 +683,124 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+/* ===== 源文件浏览样式 ===== */
+.files-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+}
+
+.file-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.category-group {
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #f5f7fa;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.category-header:hover {
+  background: #ebeef5;
+}
+
+.category-icon {
+  color: #e6a23c;
+  font-size: 16px;
+}
+
+.category-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  flex: 1;
+}
+
+.file-count {
+  margin-left: auto;
+}
+
+.category-files {
+  border-top: 1px solid #ebeef5;
+}
+
+.file-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px 8px 40px;
+  border-bottom: 1px solid #f2f3f5;
+  transition: background 0.15s;
+}
+
+.file-row:last-child {
+  border-bottom: none;
+}
+
+.file-row:hover {
+  background: #f5f7fa;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-type-icon {
+  color: #909399;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.file-name {
+  font-size: 13px;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.file-size {
+  font-size: 12px;
+}
+
+/* 展开/收起动画 */
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.25s ease;
+  max-height: 1000px;
+  overflow: hidden;
+}
+
+.slide-enter,
+.slide-leave-to {
+  max-height: 0;
+  opacity: 0;
 }
 
 /* 底部统计 */

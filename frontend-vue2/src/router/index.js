@@ -22,6 +22,11 @@ const routes = [
     name: 'HomeSingle',
     component: HomeSingle
   }
+  {
+    path: '/knowledge',
+    name: 'Knowledge',
+    component: () => import('@/views/KnowledgeFiles.vue')
+  }
   // 可扩展路由：
   // {
   //   path: '/chat',
@@ -32,11 +37,6 @@ const routes = [
   //   path: '/history',
   //   name: 'History',
   //   component: () => import('@/views/History.vue')
-  // },
-  // {
-  //   path: '/knowledge',
-  //   name: 'Knowledge',
-  //   component: () => import('@/views/Knowledge.vue')
   // }
 ]
 
