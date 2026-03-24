@@ -655,7 +655,7 @@ async def batch_import_knowledge(request: BatchImportRequest = BatchImportReques
     else:
         scan_dirs.append(KnowledgeFilePath)
 
-    supported_exts = {".pdf", ".docx", ".txt"}
+    supported_exts = {".pdf", ".docx", ".doc", ".txt"}
     files_found = []
     for scan_dir in scan_dirs:
         for root, _dirs, filenames in os.walk(scan_dir):
@@ -742,7 +742,7 @@ async def batch_import_knowledge(request: BatchImportRequest = BatchImportReques
 @app.get("/api/knowledge/scan")
 async def scan_knowledge_files():
     """扫描 knowledge_files/ 目录结构，列出所有可导入文件（不执行导入）"""
-    supported_exts = {".pdf", ".docx", ".txt"}
+    supported_exts = {".pdf", ".docx", ".doc", ".txt"}
     files = []
     for root, _dirs, filenames in os.walk(KnowledgeFilePath):
         for fname in filenames:

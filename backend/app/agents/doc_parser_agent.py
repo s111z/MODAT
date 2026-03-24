@@ -29,6 +29,7 @@ class DocParserAgent(BaseAgent):
         parsers = {
             ".pdf": self._parse_pdf,
             ".docx": self._parse_docx,
+            ".doc": self._parse_doc,
             ".txt": self._parse_txt,
         }
 
@@ -64,6 +65,46 @@ class DocParserAgent(BaseAgent):
                 if cells:
                     paragraphs.append(" | ".join(cells))
         return "\n\n".join(paragraphs)
+
+    def _parse_doc(self, filepath: str) -> str:
+        """解析DOC文件（旧版Word二进制格式）
+
+        优先用 antiword 提取文本，若不可用则通过 LibreOffice 转换为 docx 后解析。
+        """
+        import subprocess
+        import tempfile
+
+        # 方式1: antiword（轻量，速度快）
+        try:
+            result = subprocess.run(
+                ["antiword", filepath],
+                capture_output=True, text=True, timeout=30,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+        except FileNotFoundError:
+            pass  # antiword 未安装，尝试下一种方式
+
+        # 方式2: LibreOffice 转 docx 后用 python-docx 解析
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                subprocess.run(
+                    ["libreoffice", "--headless", "--convert-to", "docx",
+                     "--outdir", tmpdir, filepath],
+                    capture_output=True, timeout=60,
+                    check=True,
+                )
+                basename = os.path.splitext(os.path.basename(filepath))[0]
+                converted = os.path.join(tmpdir, f"{basename}.docx")
+                if os.path.exists(converted):
+                    return self._parse_docx(converted)
+                raise RuntimeError("LibreOffice 转换后未生成 docx 文件")
+        except FileNotFoundError:
+            raise RuntimeError(
+                "解析 .doc 文件需要安装 antiword 或 LibreOffice。\n"
+                "  Ubuntu/Debian: apt-get install antiword\n"
+                "  或: apt-get install libreoffice"
+            )
 
     def _parse_txt(self, filepath: str) -> str:
         """解析纯文本文件"""
