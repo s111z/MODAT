@@ -26,7 +26,7 @@ class SearchClient:
         try:
             max_results = max_results or self.max_results
 
-            from duckduckgo_search import DDGS
+            from ddgs import DDGS
             # 使用DuckDuckGo搜索
             with DDGS() as ddgs:
                 results = list(ddgs.text(
