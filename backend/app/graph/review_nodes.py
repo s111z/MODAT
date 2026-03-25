@@ -14,6 +14,20 @@ logger = logging.getLogger("review_workflow")
 # ===== Agent延迟初始化 =====
 _agents = {}
 
+_ALL_AGENT_NAMES = [
+    "desensitize", "history_review", "doc_parser", "struct_extract",
+    "query_builder", "knowledge_expert", "web_search",
+    "conflict_resolution", "inquiry", "plan_rewrite", "review_doc_generator",
+]
+
+
+def preload_all():
+    """启动时预加载所有 Review Agent，避免首次请求延迟"""
+    logger.info("[Review] 开始预加载所有 Agent...")
+    for name in _ALL_AGENT_NAMES:
+        _get_agent(name)
+    logger.info("[Review] 所有 Agent 预加载完成")
+
 
 def _get_agent(name: str):
     if name not in _agents:
@@ -223,7 +237,26 @@ def node_inquiry_check(state: ReviewState) -> Dict[str, Any]:
 def node_generate_review(state: ReviewState) -> Dict[str, Any]:
     """审核文档生成节点"""
     t0 = time.time()
-    logger.info("[Review] ▶ 生成审核报告")
+    kb_hits = state.get("knowledge_results", [])
+    web_hits = state.get("web_results", [])
+    context = state.get("resolved_context", "")
+
+    logger.info("[Review] ▶ 生成审核报告 | kb命中=%d web命中=%d context_len=%d",
+                len(kb_hits), len(web_hits), len(context))
+    if kb_hits:
+        logger.info("[Review]   知识库片段 TOP-%d:", len(kb_hits))
+        for i, r in enumerate(kb_hits, 1):
+            preview = r.get("content", "")[:100].replace("\n", " ")
+            src = r.get("metadata", {}).get("source", "?").split("/")[-1]
+            logger.info("[Review]     #%d [%s] %s…", i, src, preview)
+    if web_hits:
+        logger.info("[Review]   网络结果 TOP-%d:", min(len(web_hits), 3))
+        for i, r in enumerate(web_hits[:3], 1):
+            preview = r.get("content", "")[:80].replace("\n", " ")
+            logger.info("[Review]     #%d %s…", i, preview)
+    if state.get("conflict_summary"):
+        logger.info("[Review]   冲突裁决摘要: %s", state["conflict_summary"][:120])
+
     state["steps"].append("正在生成审核报告...")
 
     rewrite_agent = _get_agent("plan_rewrite")

@@ -42,6 +42,46 @@ from datetime import datetime
 
 app = FastAPI(title="智能文档评审问答系统 API")
 
+_startup_logger = logging.getLogger("startup")
+
+@app.on_event("startup")
+async def startup_preload():
+    """应用启动时预加载所有模型和 Agent"""
+    import asyncio
+    loop = asyncio.get_event_loop()
+
+    def _preload():
+        # 1. 预加载 Embedding 模型
+        _startup_logger.info("▶ 正在加载 Embedding 模型...")
+        try:
+            from core.embedding import get_embedding_model
+            from core.config import settings
+            get_embedding_model(
+                model_name=settings.embedding_model_name,
+                device=settings.embedding_device,
+            )
+            _startup_logger.info("✔ Embedding 模型加载完成")
+        except Exception as e:
+            _startup_logger.warning("⚠ Embedding 模型加载失败（将在首次请求时重试）: %s", e)
+
+        # 2. 预加载 QA Agent
+        try:
+            from graph.qa_nodes import preload_all as qa_preload
+            qa_preload()
+        except Exception as e:
+            _startup_logger.warning("⚠ QA Agent 预加载失败: %s", e)
+
+        # 3. 预加载 Review Agent
+        try:
+            from graph.review_nodes import preload_all as review_preload
+            review_preload()
+        except Exception as e:
+            _startup_logger.warning("⚠ Review Agent 预加载失败: %s", e)
+
+        _startup_logger.info("✅ 所有模型和 Agent 预加载完成，系统就绪")
+
+    await loop.run_in_executor(None, _preload)
+
 # 配置CORS
 app.add_middleware(
     CORSMiddleware,

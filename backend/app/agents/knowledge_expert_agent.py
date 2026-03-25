@@ -4,9 +4,12 @@
 查询ChromaDB向量数据库，进行语义检索。
 """
 
+import logging
 from typing import Any, List, Dict, Optional
 
 from .base_agent import BaseAgent
+
+_logger = logging.getLogger("knowledge_expert")
 
 
 class KnowledgeExpertAgent(BaseAgent):
@@ -45,12 +48,24 @@ class KnowledgeExpertAgent(BaseAgent):
         filter_meta: Optional[Dict] = None,
     ) -> List[Dict]:
         """语义检索"""
+        _logger.info("  [KB] query: %s", query)
         try:
             results = self.db_manager.search(
                 query=query,
                 top_k=top_k,
                 filter_meta=filter_meta,
             )
+            if results:
+                for i, r in enumerate(results, 1):
+                    content_preview = r.get("content", "")[:120].replace("\n", " ")
+                    source = r.get("metadata", {}).get("source", "?")
+                    score = r.get("score", r.get("distance", "?"))
+                    _logger.info("  [KB] hit#%d score=%.4f src=%s | %s…",
+                                 i, float(score) if score != "?" else 0,
+                                 source.split("/")[-1] if source != "?" else "?",
+                                 content_preview)
+            else:
+                _logger.info("  [KB] 无命中结果")
             return results
         except Exception as e:
             self.logger.error(f"知识库检索失败: {e}")
@@ -66,3 +81,4 @@ class KnowledgeExpertAgent(BaseAgent):
             source = r.get("metadata", {}).get("source", "未知来源")
             parts.append(f"[来源{i}: {source}]\n{content}")
         return "\n\n".join(parts)
+

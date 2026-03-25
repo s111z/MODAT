@@ -22,6 +22,19 @@ _conflict_agent = None
 _response_agent = None
 
 
+def preload_all():
+    """启动时预加载所有 QA Agent，避免首次请求延迟"""
+    logger.info("[QA] 开始预加载所有 Agent...")
+    _get_desensitize_agent()
+    _get_intent_agent()
+    _get_query_processor()
+    _get_knowledge_agent()
+    _get_web_search_agent()
+    _get_conflict_agent()
+    _get_response_agent()
+    logger.info("[QA] 所有 Agent 预加载完成")
+
+
 def _get_desensitize_agent():
     global _desensitize_agent
     if _desensitize_agent is None:
@@ -230,7 +243,26 @@ def node_conflict_resolve(state: QAState) -> Dict[str, Any]:
 def node_generate_response(state: QAState) -> Dict[str, Any]:
     """回复生成节点"""
     t0 = time.time()
-    logger.info("[QA] ▶ 回复生成 | context_len=%d", len(state.get("resolved_context", "")))
+    context = state.get("resolved_context", "")
+    kb_hits = state.get("knowledge_results", [])
+    web_hits = state.get("web_results", [])
+
+    logger.info("[QA] ▶ 回复生成 | kb命中=%d web命中=%d context_len=%d",
+                len(kb_hits), len(web_hits), len(context))
+    if kb_hits:
+        logger.info("[QA]   知识库片段 TOP-%d:", len(kb_hits))
+        for i, r in enumerate(kb_hits, 1):
+            preview = r.get("content", "")[:100].replace("\n", " ")
+            src = r.get("metadata", {}).get("source", "?").split("/")[-1]
+            logger.info("[QA]     #%d [%s] %s…", i, src, preview)
+    if web_hits:
+        logger.info("[QA]   网络结果 TOP-%d:", min(len(web_hits), 3))
+        for i, r in enumerate(web_hits[:3], 1):
+            preview = r.get("content", "")[:80].replace("\n", " ")
+            logger.info("[QA]     #%d %s…", i, preview)
+    if not kb_hits and not web_hits:
+        logger.warning("[QA]   ⚠ 无任何检索结果，将仅凭 LLM 知识生成回复")
+
     state["steps"].append("正在生成回复...")
 
     agent = _get_response_agent()
