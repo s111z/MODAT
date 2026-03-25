@@ -1,8 +1,11 @@
 import chromadb
 import uuid
+import logging
 from typing import List, Dict, Optional, Any
 # from chromadb.utils import embedding_functions
 from .embedding_function import VLLMEmbeddingFunction
+
+_logger = logging.getLogger("vector_store")
 
 class VectorDBManager:
     def __init__(self, db_path: str = "./chroma_db", collection_name: str = "mota_knowledge"):
@@ -13,19 +16,25 @@ class VectorDBManager:
         """
         # 1. 初始化持久化客户端
         self.client = chromadb.PersistentClient(path=db_path)
-        
-        # 2. 设置嵌入模型 
-        # 注意：默认的 all-MiniLM-L6-v2 对中文支持一般。
-        # 生产环境建议换成 OpenAIEmbeddingFunction 或 HuggingFace 的中文模型。
-        self.embedding_fn = VLLMEmbeddingFunction()
-        
+
+        # 2. 设置嵌入模型，使用配置中的本地路径
+        import os
+        from .config import settings
+        model_path = os.path.join(settings.model_base_dir, settings.embedding_model_name)
+        _logger.info("[ChromaDB] 使用 Embedding 模型: %s", model_path)
+        self.embedding_fn = VLLMEmbeddingFunction(
+            model_name_or_path=model_path,
+            device=settings.embedding_device,
+        )
+
         # 3. 获取或创建集合
         self.collection = self.client.get_or_create_collection(
             name=collection_name,
             embedding_function=self.embedding_fn,
-            metadata={"hnsw:space": "cosine"} # 使用余弦相似度
+            metadata={"hnsw:space": "cosine"}
         )
-        print(f"📦 [ChromaDB] 已加载集合: {collection_name}, 当前数据量: {self.collection.count()}")
+        _logger.info("[ChromaDB] 已加载集合: %s, 当前数据量: %d",
+                     collection_name, self.collection.count())
 
     # ==========================
     # C (Create) - 增 / 插入
@@ -64,14 +73,22 @@ class VectorDBManager:
         :param filter_meta: 过滤条件，例如 {"source": "file.pdf"}
         """
         try:
+            count = self.collection.count()
+            actual_k = min(top_k, count)
+            if actual_k == 0:
+                _logger.warning("[ChromaDB] 集合为空，无法检索")
+                return []
             results = self.collection.query(
                 query_texts=[query],
-                n_results=top_k,
-                where=filter_meta # Chroma 的过滤语法
+                n_results=actual_k,
+                where=filter_meta
             )
-            return self._clean_results(results)
+            cleaned = self._clean_results(results)
+            _logger.debug("[ChromaDB] query=%s top_k=%d 集合总量=%d 命中=%d",
+                          query[:40], top_k, count, len(cleaned))
+            return cleaned
         except Exception as e:
-            print(f"❌ [ChromaDB] 查询失败: {e}")
+            _logger.error("[ChromaDB] 查询失败: %s", e)
             return []
 
     def get_all(self, limit: int = 10) -> List[Dict]:
