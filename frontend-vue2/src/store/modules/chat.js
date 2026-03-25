@@ -84,16 +84,10 @@ export default {
     async sendMessageStream({ commit, state, rootState }, { message, mode }) {
       commit('SET_LOADING', true)
 
-      // 添加用户消息
-      commit('ADD_MESSAGE', {
-        id: Date.now().toString(),
-        role: 'user',
-        content: message
-      })
-
       // 添加空的助手消息，后续追加内容
+      const assistantMsgId = (Date.now() + 1).toString()
       commit('ADD_MESSAGE', {
-        id: Date.now().toString(),
+        id: assistantMsgId,
         role: 'assistant',
         content: ''
       })
@@ -104,7 +98,11 @@ export default {
           (event) => {
             // 处理流式数据
             if (event.type === 'response') {
-              commit('UPDATE_LAST_MESSAGE', event.content)
+              // 找到对应消息并替换完整内容
+              const msg = state.messages.find(m => m.id === assistantMsgId)
+              if (msg) {
+                msg.content = event.content
+              }
             } else if (event.type === 'step') {
               commit('agent/ADD_STEP', {
                 id: `step-${Date.now()}`,
@@ -124,6 +122,57 @@ export default {
       } catch (error) {
         console.error('Stream error:', error)
         commit('SET_LOADING', false)
+      }
+    },
+
+    /**
+     * 发送文档审核请求（调用 /api/review）
+     */
+    async sendReview({ commit, state }, { message, filename }) {
+      commit('SET_LOADING', true)
+
+      // 添加空的助手消息
+      const assistantMsgId = (Date.now() + 1).toString()
+      commit('ADD_MESSAGE', {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: ''
+      })
+
+      try {
+        const response = await api.review({
+          filename,
+          message,
+          mode: 'review'
+        })
+
+        // 更新助手消息
+        const msg = state.messages.find(m => m.id === assistantMsgId)
+        if (msg) {
+          msg.content = response.response
+        }
+
+        // 如果有步骤信息，更新 agent 模块
+        if (response.steps && response.steps.length > 0) {
+          commit('agent/SET_STEPS', response.steps.map((content, index) => ({
+            id: `step-${index}`,
+            type: 'thinking',
+            content,
+            timestamp: Date.now()
+          })), { root: true })
+        }
+
+        return response
+      } catch (error) {
+        console.error('Review error:', error)
+        const msg = state.messages.find(m => m.id === assistantMsgId)
+        if (msg) {
+          msg.content = `抱歉，文档审核发生错误: ${error.message}`
+        }
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+        commit('CLEAR_UPLOADED_FILES')
       }
     }
   }

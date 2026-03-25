@@ -123,7 +123,7 @@ export default {
   },
   methods: {
     ...mapMutations('chat', ['SET_INPUT', 'ADD_MESSAGE', 'SET_LOADING']),
-    ...mapActions('chat', ['sendMessage', 'sendMessageStream']),
+    ...mapActions('chat', ['sendMessage', 'sendMessageStream', 'sendReview']),
 
     async handleFileSelect(e) {
       const files = e.target.files
@@ -177,29 +177,53 @@ export default {
       this.SET_LOADING(true)
 
       try {
-        // 判断是否为文档审核模式
-        if (taskMode === 'document-review' && mockService.isEnabled()) {
-          // 触发文档审核流程
-          await this.triggerDocumentReview(query)
-        } else if (mockService.isEnabled() && taskMode === 'qa') {
-          // 知识问答模式 - 使用Mock
-          await this.triggerKnowledgeQA(query)
+        if (mockService.isEnabled()) {
+          // ===== Mock 模式 =====
+          if (taskMode === 'document-review') {
+            await this.triggerDocumentReview(query)
+          } else {
+            await this.triggerKnowledgeQA(query)
+          }
         } else {
-          // 真实API调用 - 尝试使用流式API
-          await this.sendMessageStream({ message: query })
+          // ===== 真实 API 模式 =====
+          if (taskMode === 'document-review' && this.serverFilename) {
+            // 文档审核 → 调用 /api/review
+            await this.sendReview({
+              message: query,
+              filename: this.serverFilename
+            })
+          } else {
+            // 知识问答 → 调用 /api/chat/stream（降级到 /api/chat）
+            await this.sendMessageStream({ message: query, mode: 'qa' })
+          }
         }
       } catch (error) {
         console.error('API失败:', error)
 
-        try {
-          // 降级到普通API
-          await this.sendMessage()
-        } catch (fallbackError) {
-          console.error('普通API也失败:', fallbackError)
+        if (!mockService.isEnabled()) {
+          try {
+            // 流式失败降级到普通 /api/chat
+            const response = await api.chat({ message: query, mode: 'qa' })
+            this.ADD_MESSAGE({
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: response.response || '未获取到回复'
+            })
+            this.SET_LOADING(false)
+          } catch (fallbackError) {
+            console.error('普通API也失败:', fallbackError)
+            this.ADD_MESSAGE({
+              id: Date.now().toString(),
+              role: 'assistant',
+              content: '抱歉，连接后端服务失败。请确保后端服务正在运行。'
+            })
+            this.SET_LOADING(false)
+          }
+        } else {
           this.ADD_MESSAGE({
             id: Date.now().toString(),
             role: 'assistant',
-            content: '抱歉，连接后端服务失败。请确保后端服务正在运行。'
+            content: '抱歉，发生错误: ' + error.message
           })
           this.SET_LOADING(false)
         }

@@ -1,6 +1,6 @@
 {
-  "enabled": true,
-  "mode": "mock",
+  "enabled": false,
+  "mode": "api",
   "scenarios": {
     "documentReview": {
       "conversations": [
