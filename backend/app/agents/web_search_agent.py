@@ -4,9 +4,20 @@ Web搜索Agent
 使用DuckDuckGo进行网络搜索，格式化结果。
 """
 
+import logging
 from typing import Any, List, Dict
 
 from .base_agent import BaseAgent
+
+_logger = logging.getLogger("web_search")
+
+
+def _is_web_search_enabled() -> bool:
+    try:
+        from core.config import settings
+        return settings.web_search_enabled
+    except Exception:
+        return False
 
 
 class WebSearchAgent(BaseAgent):
@@ -38,9 +49,14 @@ class WebSearchAgent(BaseAgent):
         return {"source": "web_search", "searches": all_results}
 
     def search(self, query: str, max_results: int = 5) -> List[Dict]:
-        """执行网络搜索"""
+        """执行网络搜索，受 WEB_SEARCH_ENABLED 开关控制"""
+        if not _is_web_search_enabled():
+            _logger.debug("[WebSearch] 已禁用，跳过 query=%s", query[:40])
+            return []
         try:
+            _logger.info("[WebSearch] query=%s", query[:60])
             results = self.search_client.search(query, max_results=max_results)
+            _logger.info("[WebSearch] 命中 %d 条", len(results))
             return results
         except Exception as e:
             self.logger.error(f"网络搜索失败: {e}")

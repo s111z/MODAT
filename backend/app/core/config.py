@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     # 搜索引擎配置
     search_engine: str = os.getenv("SEARCH_ENGINE", "duckduckgo")
     search_max_results: int = int(os.getenv("SEARCH_MAX_RESULTS", "5"))
+    web_search_enabled: bool = os.getenv("WEB_SEARCH_ENABLED", "true").lower() == "true"
     
     # ChromaDB配置
     chroma_db_path: str = os.getenv("CHROMA_DB_PATH", "./chroma_db")
