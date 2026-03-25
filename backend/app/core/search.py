@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from duckduckgo_search import DDGS
-from config import settings
+from core.config import settings
 
 class SearchClient:
     """搜索客户端，使用DuckDuckGo"""
