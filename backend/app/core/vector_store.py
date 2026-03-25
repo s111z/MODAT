@@ -77,8 +77,7 @@ class VectorDBManager:
     def get_all(self, limit: int = 10) -> List[Dict]:
         """获取前 N 条数据（用于调试）"""
         results = self.collection.get(limit=limit)
-        # 构造伪 query 结果结构以便复用清洗逻辑
-        # 注意：get 返回的结构和 query 略有不同，这里简单处理
+        # 构造伪 query 结构
         data = []
         if results['ids']:
             for i in range(len(results['ids'])):
@@ -88,6 +87,26 @@ class VectorDBManager:
                     "metadata": results['metadatas'][i]
                 })
         return data
+
+    def get_all_sources(self) -> set:
+        """获取向量库中所有已入库文件的 source 路径（去重）"""
+        try:
+            total = self.collection.count()
+            if total == 0:
+                return set()
+            results = self.collection.get(
+                limit=total,
+                include=["metadatas"]
+            )
+            sources = set()
+            if results['metadatas']:
+                for meta in results['metadatas']:
+                    if meta and meta.get("source"):
+                        sources.add(meta["source"])
+            return sources
+        except Exception as e:
+            print(f"❌ [ChromaDB] 获取已入库源失败: {e}")
+            return set()
 
     # ==========================
     # U (Update) - 改 / 更新

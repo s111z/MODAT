@@ -189,6 +189,23 @@ class APIClient {
   // ========== 向量库管理接口 ==========
 
   /**
+   * 增量同步知识库到向量库（新增/跳过/清理）
+   * @param {Object} options - { category?: string, permissions?: number, subdirs?: string[] }
+   * @returns {Promise<Object>}
+   */
+  async syncKnowledge(options = {}) {
+    try {
+      const response = await axios.post(`${this.baseUrl}/api/knowledge/batch_import`, options, {
+        timeout: 300000 // 5分钟超时，批量导入可能较慢
+      })
+      return response.data
+    } catch (error) {
+      const message = error.response?.data?.detail || error.message
+      throw new Error(`同步知识库失败: ${message}`)
+    }
+  }
+
+  /**
    * 添加文档到向量库
    * @param {Object} request - { filename: string, metadatas?: Object }
    * @returns {Promise<Object>}

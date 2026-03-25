@@ -30,6 +30,7 @@ from session.session_store import session_store
 from api.websocket_handler import ws_manager
 from task.task_queue import task_queue
 from task.task_models import Task, TaskStatus, TaskType
+from core.vector_store import db_manager
 from datetime import datetime
 
 app = FastAPI(title="智能文档评审问答系统 API")
@@ -642,10 +643,13 @@ class BatchImportRequest(BaseModel):
 
 @app.post("/api/knowledge/batch_import")
 async def batch_import_knowledge(request: BatchImportRequest = BatchImportRequest()):
-    """批量扫描 knowledge_files/ 目录（含子目录），将所有支持的文件导入向量库。
+    """增量同步 knowledge_files/ 目录到向量库。
 
-    支持直接将文件放入 knowledge_files/ 下的任意子目录，一键入库。
+    - 新文件（目录有、向量库没有）→ 导入
+    - 已有文件（目录有、向量库也有）→ 跳过
+    - 已删文件（目录没有、向量库有）→ 从向量库删除
     """
+    # 1. 扫描磁盘文件
     scan_dirs = []
     if request.subdirs:
         for sub in request.subdirs:
@@ -656,44 +660,78 @@ async def batch_import_knowledge(request: BatchImportRequest = BatchImportReques
         scan_dirs.append(KnowledgeFilePath)
 
     supported_exts = {".pdf", ".docx", ".doc", ".txt"}
-    files_found = []
+    disk_files = {}  # filepath -> file_info
     for scan_dir in scan_dirs:
         for root, _dirs, filenames in os.walk(scan_dir):
             for fname in filenames:
+                if fname.startswith("."):
+                    continue
                 ext = os.path.splitext(fname)[1].lower()
                 if ext in supported_exts:
-                    files_found.append({
+                    filepath = os.path.join(root, fname)
+                    disk_files[filepath] = {
                         "filename": fname,
-                        "filepath": os.path.join(root, fname),
+                        "filepath": filepath,
                         "ext": ext,
                         "subdir": os.path.relpath(root, KnowledgeFilePath),
-                    })
+                    }
 
-    if not files_found:
-        return {
-            "status": "warning",
-            "message": "未找到可导入的文件",
-            "scanned_dirs": [os.path.relpath(d, KnowledgeFilePath) for d in scan_dirs],
-            "results": [],
-        }
+    # 2. 查询向量库中已有的 source 集合
+    existing_sources = db_manager.get_all_sources()
+
+    # 3. 计算差异
+    disk_paths = set(disk_files.keys())
+    to_add = disk_paths - existing_sources       # 新文件：需要导入
+    to_skip = disk_paths & existing_sources       # 已有：跳过
+    to_delete = existing_sources - disk_paths     # 已删：需要从向量库清理
 
     results = []
-    success_count = 0
-    fail_count = 0
+    add_success = 0
+    add_fail = 0
+    delete_count = 0
 
-    for file_info in files_found:
+    # 4. 删除向量库中已不存在于磁盘的文件
+    for source_path in to_delete:
         try:
-            source = file_info["filepath"]
-            file_type = file_info["ext"]
-            subdir = file_info["subdir"]
+            db_manager.delete_by_filter({"source": source_path})
+            delete_count += 1
+            results.append({
+                "filename": os.path.basename(source_path),
+                "action": "deleted",
+                "success": True,
+                "message": "文件已从磁盘删除，向量库已同步清理",
+            })
+        except Exception as e:
+            results.append({
+                "filename": os.path.basename(source_path),
+                "action": "delete_failed",
+                "success": False,
+                "message": str(e),
+            })
 
+    # 5. 跳过已存在的文件
+    for filepath in to_skip:
+        info = disk_files[filepath]
+        results.append({
+            "filename": info["filename"],
+            "subdir": info["subdir"],
+            "action": "skipped",
+            "success": True,
+            "message": "已在向量库中，跳过",
+        })
+
+    # 6. 导入新文件
+    for filepath in to_add:
+        file_info = disk_files[filepath]
+        try:
+            subdir = file_info["subdir"]
             state: VectorDBState = {
                 "operation": "add",
                 "filename": file_info["filename"],
                 "content": "",
                 "file_id": "",
-                "source": source,
-                "file_type": file_type,
+                "source": filepath,
+                "file_type": file_info["ext"],
                 "chunk_index": 0,
                 "total_chunks": 0,
                 "create_at": datetime.now(),
@@ -711,30 +749,39 @@ async def batch_import_knowledge(request: BatchImportRequest = BatchImportReques
             results.append({
                 "filename": file_info["filename"],
                 "subdir": subdir,
+                "action": "added",
                 "success": result["success"],
                 "message": result["message"],
             })
 
             if result["success"]:
-                success_count += 1
+                add_success += 1
             else:
-                fail_count += 1
+                add_fail += 1
 
         except Exception as e:
-            fail_count += 1
+            add_fail += 1
             results.append({
                 "filename": file_info["filename"],
                 "subdir": file_info["subdir"],
+                "action": "add_failed",
                 "success": False,
                 "message": str(e),
             })
 
     return {
-        "status": "success" if fail_count == 0 else "partial",
-        "message": f"扫描完成: {success_count} 个成功, {fail_count} 个失败, 共 {len(files_found)} 个文件",
-        "total": len(files_found),
-        "success_count": success_count,
-        "fail_count": fail_count,
+        "status": "success" if add_fail == 0 else "partial",
+        "message": (
+            f"同步完成: 新增 {add_success} 个, "
+            f"跳过 {len(to_skip)} 个, "
+            f"清理 {delete_count} 个, "
+            f"失败 {add_fail} 个"
+        ),
+        "total_on_disk": len(disk_files),
+        "added": add_success,
+        "skipped": len(to_skip),
+        "deleted": delete_count,
+        "failed": add_fail,
         "results": results,
     }
 

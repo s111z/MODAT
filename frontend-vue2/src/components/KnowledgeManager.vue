@@ -24,27 +24,58 @@
 
     <!-- ===== Tab 1: 向量库文档（原有功能） ===== -->
     <template v-if="activeTab === 'vectordb'">
-      <!-- 上传区域 -->
+      <!-- 上传与同步区域 -->
       <div class="upload-section">
-        <input
-          ref="fileInput"
-          type="file"
-          style="display: none"
-          accept=".pdf"
-          @change="handleFileUpload"
-          :disabled="isUploading"
-        />
+        <div class="action-row">
+          <input
+            ref="fileInput"
+            type="file"
+            style="display: none"
+            accept=".pdf"
+            @change="handleFileUpload"
+            :disabled="isUploading"
+          />
 
-        <el-button
-          type="primary"
-          @click="$refs.fileInput.click()"
-          :loading="isUploading"
-          :disabled="isUploading"
-          class="upload-btn"
+          <el-button
+            type="primary"
+            @click="$refs.fileInput.click()"
+            :loading="isUploading"
+            :disabled="isUploading || isSyncing"
+            size="small"
+          >
+            <i v-if="!isUploading" class="el-icon-upload el-icon--left"></i>
+            {{ isUploading ? '处理中...' : '上传PDF' }}
+          </el-button>
+
+          <el-button
+            type="success"
+            @click="handleSync"
+            :loading="isSyncing"
+            :disabled="isSyncing || isUploading"
+            size="small"
+          >
+            <i v-if="!isSyncing" class="el-icon-refresh el-icon--left"></i>
+            {{ isSyncing ? '同步中...' : '同步知识库' }}
+          </el-button>
+        </div>
+
+        <!-- 同步结果显示 -->
+        <el-alert
+          v-if="syncResult.type"
+          :type="syncResult.type"
+          :title="syncResult.message"
+          :closable="true"
+          @close="syncResult.type = ''"
+          class="upload-status"
+          show-icon
         >
-          <i v-if="!isUploading" class="el-icon-upload el-icon--left"></i>
-          {{ isUploading ? '处理中...' : '上传PDF到知识库' }}
-        </el-button>
+          <div v-if="syncResult.details" class="sync-details">
+            <span v-if="syncResult.details.added > 0" class="sync-stat added">新增 {{ syncResult.details.added }}</span>
+            <span v-if="syncResult.details.skipped > 0" class="sync-stat skipped">跳过 {{ syncResult.details.skipped }}</span>
+            <span v-if="syncResult.details.deleted > 0" class="sync-stat deleted">清理 {{ syncResult.details.deleted }}</span>
+            <span v-if="syncResult.details.failed > 0" class="sync-stat failed">失败 {{ syncResult.details.failed }}</span>
+          </div>
+        </el-alert>
 
         <!-- 上传状态显示 -->
         <el-alert
@@ -238,6 +269,13 @@ export default {
         message: ''
       },
       processingSteps: [],
+      // 同步相关
+      isSyncing: false,
+      syncResult: {
+        type: '',
+        message: '',
+        details: null
+      },
       // 源文件浏览相关
       fileTree: {},
       filesLoading: false,
@@ -328,6 +366,35 @@ export default {
     },
 
     // ===== 原有方法 =====
+
+    async handleSync() {
+      this.isSyncing = true
+      this.syncResult = { type: '', message: '', details: null }
+
+      try {
+        const res = await apiClient.syncKnowledge({ category: 'law', permissions: 0 })
+        this.syncResult = {
+          type: res.failed > 0 ? 'warning' : 'success',
+          message: res.message,
+          details: {
+            added: res.added,
+            skipped: res.skipped,
+            deleted: res.deleted,
+            failed: res.failed
+          }
+        }
+        // 同步完成后刷新向量库文档列表
+        await this.loadDocuments()
+      } catch (e) {
+        this.syncResult = {
+          type: 'error',
+          message: e.message,
+          details: null
+        }
+      } finally {
+        this.isSyncing = false
+      }
+    },
 
     async loadDocuments() {
       if (mockService.isEnabled()) {
@@ -551,19 +618,40 @@ export default {
   border-bottom-color: #3b82f6;
 }
 
-/* 上传区域 */
+/* 上传与同步区域 */
 .upload-section {
   padding: 16px 24px;
   border-bottom: 1px solid #e0e0e0;
 }
 
+.action-row {
+  display: flex;
+  gap: 8px;
+}
+
 .upload-btn {
-  width: 100%;
+  flex: 1;
 }
 
 .upload-status {
   margin-top: 12px;
 }
+
+.sync-details {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.sync-stat {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sync-stat.added { color: #67c23a; }
+.sync-stat.skipped { color: #909399; }
+.sync-stat.deleted { color: #e6a23c; }
+.sync-stat.failed { color: #f56c6c; }
 
 .processing-steps {
   margin-top: 8px;
