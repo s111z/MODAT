@@ -51,13 +51,21 @@ async def startup_preload():
     loop = asyncio.get_event_loop()
 
     def _preload():
+        # 强制离线模式，禁止 HuggingFace Hub 发起任何网络请求
+        import os as _os
+        _os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        _os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
         # 1. 预加载 Embedding 模型
         _startup_logger.info("▶ 正在加载 Embedding 模型...")
         try:
             from core.embedding import get_embedding_model
             from core.config import settings
+            # 拼接完整本地路径，避免被当成 HuggingFace Hub ID
+            model_path = _os.path.join(settings.model_base_dir, settings.embedding_model_name)
+            _startup_logger.info("  模型路径: %s", model_path)
             get_embedding_model(
-                model_name=settings.embedding_model_name,
+                model_name=model_path,
                 device=settings.embedding_device,
             )
             _startup_logger.info("✔ Embedding 模型加载完成")
