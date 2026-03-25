@@ -171,9 +171,14 @@ def node_multi_source_search(state: ReviewState) -> Dict[str, Any]:
     kb_results = []
     web_results = []
 
+    from core.config import settings
+    web_enabled = settings.web_search_enabled
+    if not web_enabled:
+        logger.info("[Review] 网络检索已禁用(WEB_SEARCH_ENABLED=false)，仅检索知识库")
+
     for query in state["review_queries"]:
         kb_r = kb_agent.search(query, top_k=3)
-        web_r = web_agent.search(query, max_results=3)
+        web_r = web_agent.search(query, max_results=3) if web_enabled else []
         kb_results.extend(kb_r)
         web_results.extend(web_r)
         logger.debug("[Review]   检索 '%s' → kb=%d web=%d", query[:30], len(kb_r), len(web_r))
