@@ -19,6 +19,13 @@ import json
 import asyncio
 import os
 import uuid
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 from graph.qa_workflow import create_qa_workflow
 from graph.qa_state import QAState

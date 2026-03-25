@@ -4,8 +4,12 @@
 每个节点函数接收QAState，调用对应Agent，更新并返回state。
 """
 
+import logging
+import time
 from typing import Dict, Any
 from .qa_state import QAState
+
+logger = logging.getLogger("qa_workflow")
 
 
 # ===== Agent实例(延迟初始化) =====
@@ -78,6 +82,8 @@ def _get_response_agent():
 
 def node_desensitize(state: QAState) -> Dict[str, Any]:
     """信息脱敏节点"""
+    t0 = time.time()
+    logger.info("[QA] ▶ 信息脱敏 | query=%s", state["query"][:50])
     state["steps"].append("正在进行信息脱敏...")
 
     agent = _get_desensitize_agent()
@@ -90,12 +96,14 @@ def node_desensitize(state: QAState) -> Dict[str, Any]:
         state["steps"].append(f"检测到 {len(mapping)} 个敏感信息已脱敏")
     else:
         state["steps"].append("未检测到敏感信息")
-
+    logger.info("[QA] ✔ 信息脱敏完成 | pii=%d | %.2fs", len(mapping), time.time() - t0)
     return state
 
 
 def node_intent_recognize(state: QAState) -> Dict[str, Any]:
     """意图识别节点"""
+    t0 = time.time()
+    logger.info("[QA] ▶ 意图识别 | query=%s", state["desensitized_query"][:50])
     state["steps"].append("正在识别用户意图...")
 
     agent = _get_intent_agent()
@@ -106,12 +114,15 @@ def node_intent_recognize(state: QAState) -> Dict[str, Any]:
 
     mode_text = "深度思考" if state["deep_mode"] else "快速回答"
     state["steps"].append(f"意图: {state['intent']}, 模式: {mode_text}")
-
+    logger.info("[QA] ✔ 意图识别完成 | intent=%s deep_mode=%s | %.2fs",
+                state["intent"], state["deep_mode"], time.time() - t0)
     return state
 
 
 def node_query_process(state: QAState) -> Dict[str, Any]:
     """Query处理节点"""
+    t0 = time.time()
+    logger.info("[QA] ▶ Query处理 | deep_mode=%s", state["deep_mode"])
     state["steps"].append("正在处理查询...")
 
     agent = _get_query_processor()
@@ -128,12 +139,15 @@ def node_query_process(state: QAState) -> Dict[str, Any]:
         f"Query处理完成: {state['query_type']}, "
         f"共{len(state['processed_queries'])}个查询"
     )
-
+    logger.info("[QA] ✔ Query处理完成 | type=%s queries=%d | %.2fs",
+                state["query_type"], len(state["processed_queries"]), time.time() - t0)
     return state
 
 
 def node_simple_qa(state: QAState) -> Dict[str, Any]:
     """简单问答节点 - 仅查询知识库"""
+    t0 = time.time()
+    logger.info("[QA] ▶ 知识库检索 | queries=%d", len(state["processed_queries"]))
     state["steps"].append("正在检索知识库...")
 
     agent = _get_knowledge_agent()
@@ -141,33 +155,38 @@ def node_simple_qa(state: QAState) -> Dict[str, Any]:
     for query in state["processed_queries"]:
         results = agent.search(query, top_k=3)
         all_results.extend(results)
+        logger.debug("[QA]   检索 '%s' → %d 条", query[:30], len(results))
 
     state["knowledge_results"] = all_results
     state["resolved_context"] = agent.format_context(all_results)
     state["conflict_found"] = False
 
     state["steps"].append(f"知识库检索完成，找到 {len(all_results)} 条结果")
+    logger.info("[QA] ✔ 知识库检索完成 | hits=%d | %.2fs", len(all_results), time.time() - t0)
     return state
 
 
 def node_deep_qa(state: QAState) -> Dict[str, Any]:
     """深度问答节点 - 并行查询知识库+网络"""
+    t0 = time.time()
+    logger.info("[QA] ▶ 深度检索(知识库+网络) | queries=%d", len(state["processed_queries"]))
     state["steps"].append("正在并行检索知识库和网络...")
 
     kb_agent = _get_knowledge_agent()
     web_agent = _get_web_search_agent()
 
-    # 知识库检索
     kb_results = []
+    web_results = []
+
     for query in state["processed_queries"]:
         results = kb_agent.search(query, top_k=3)
         kb_results.extend(results)
+        logger.debug("[QA]   KB '%s' → %d 条", query[:30], len(results))
 
-    # 网络搜索
-    web_results = []
     for query in state["processed_queries"]:
         results = web_agent.search(query, max_results=3)
         web_results.extend(results)
+        logger.debug("[QA]   Web '%s' → %d 条", query[:30], len(results))
 
     state["knowledge_results"] = kb_results
     state["web_results"] = web_results
@@ -175,11 +194,16 @@ def node_deep_qa(state: QAState) -> Dict[str, Any]:
     state["steps"].append(
         f"多源检索完成: 知识库 {len(kb_results)} 条, 网络 {len(web_results)} 条"
     )
+    logger.info("[QA] ✔ 深度检索完成 | kb=%d web=%d | %.2fs",
+                len(kb_results), len(web_results), time.time() - t0)
     return state
 
 
 def node_conflict_resolve(state: QAState) -> Dict[str, Any]:
     """冲突裁决节点"""
+    t0 = time.time()
+    logger.info("[QA] ▶ 冲突裁决 | kb=%d web=%d",
+                len(state["knowledge_results"]), len(state.get("web_results", [])))
     state["steps"].append("正在进行多源信息裁决...")
 
     agent = _get_conflict_agent()
@@ -198,11 +222,15 @@ def node_conflict_resolve(state: QAState) -> Dict[str, Any]:
     else:
         state["steps"].append(f"多源信息一致: {state['conflict_summary']}")
 
+    logger.info("[QA] ✔ 冲突裁决完成 | conflict=%s | %.2fs",
+                state["conflict_found"], time.time() - t0)
     return state
 
 
 def node_generate_response(state: QAState) -> Dict[str, Any]:
     """回复生成节点"""
+    t0 = time.time()
+    logger.info("[QA] ▶ 回复生成 | context_len=%d", len(state.get("resolved_context", "")))
     state["steps"].append("正在生成回复...")
 
     agent = _get_response_agent()
@@ -223,5 +251,5 @@ def node_generate_response(state: QAState) -> Dict[str, Any]:
 
     state["response"] = response
     state["steps"].append("回复生成完成")
-
+    logger.info("[QA] ✔ 回复生成完成 | response_len=%d | %.2fs", len(response), time.time() - t0)
     return state

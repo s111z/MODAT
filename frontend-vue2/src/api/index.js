@@ -120,7 +120,9 @@ class APIClient {
    */
   async review(request) {
     try {
-      const response = await axios.post(`${this.baseUrl}/api/review`, request)
+      const response = await axios.post(`${this.baseUrl}/api/review`, request, {
+        timeout: 300000 // 5分钟，审核流程耗时较长
+      })
       return response.data
     } catch (error) {
       throw new Error(`文档审核请求失败: ${error.message}`)
@@ -366,7 +368,7 @@ class APIClient {
    */
   async getInfo() {
     try {
-      const response = await axios.get(`${this.baseURL}/`)
+      const response = await axios.get(`${this.baseUrl}/`)
       return response.data
     } catch (error) {
       throw new Error('获取API信息失败')
