@@ -1,12 +1,16 @@
 from typing import List, Dict, Any
-from duckduckgo_search import DDGS
-from core.config import settings
+
+try:
+    from core.config import settings
+    DEFAULT_MAX_RESULTS = settings.search_max_results
+except Exception:
+    DEFAULT_MAX_RESULTS = 5
 
 class SearchClient:
     """搜索客户端，使用DuckDuckGo"""
-    
+
     def __init__(self, max_results: int = None):
-        self.max_results = max_results or settings.search_max_results
+        self.max_results = max_results or DEFAULT_MAX_RESULTS
     
     def search(self, query: str, max_results: int = None) -> List[Dict[str, Any]]:
         """
@@ -21,7 +25,8 @@ class SearchClient:
         """
         try:
             max_results = max_results or self.max_results
-            
+
+            from duckduckgo_search import DDGS
             # 使用DuckDuckGo搜索
             with DDGS() as ddgs:
                 results = list(ddgs.text(

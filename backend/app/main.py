@@ -734,7 +734,7 @@ async def batch_import_knowledge(request: BatchImportRequest = BatchImportReques
                 "file_type": file_info["ext"],
                 "chunk_index": 0,
                 "total_chunks": 0,
-                "create_at": datetime.now(),
+                "created_at": str(datetime.now()),
                 "category": f"{request.category}/{subdir}" if subdir != "." else request.category,
                 "permissions": request.permissions,
                 "results": [],
