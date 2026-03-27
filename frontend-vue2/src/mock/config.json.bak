@@ -1,0 +1,473 @@
+{
+  "enabled": false,
+  "mode": "api",
+  "scenarios": {
+    "documentReview": {
+      "conversations": [
+        {
+          "id": "review-1",
+          "userMessage": "请审核这份合规文档",
+          "fileName": "MOTA案例2_人力外包草案.docx",
+          "assistantMessage": "我已经完成了对《xx汽车零件生产公司墨西哥分厂人力资源成本优化计划》草案的扫描与深度合规审核。\n > **审查结论**：该原始方案存在**重度财务及刑事违规风险**。在墨西哥《联邦劳动法》（LFT）框架下，虽然方案在“非核心业务外包”和“试用期设置”上符合规范，但在核心的人员编制与税务处理上存在**致命漏洞**。\n\n已为您生成《xx汽车零件生产公司墨西哥分厂人力资源合规与运营方案（优化版）》。",
+          "reviewData": {
+            "documentContent": "项目背景： 我司墨西哥配件工厂即将开工，为降低运营成本与管理风险，现拟定以下人力资源外包方案：\n\n1. 考虑到初入墨西哥，不熟悉当地工会与社保。为规避直接用工风险，我司计划将工厂的组装线工人、质检员、搬运工全部通过当地一家人力资源公司 A 派遣入职。我司仅负责生产管理，不与个人签订劳动合同。若因外包违规被罚，预估单项最高罚款金额为59.25万比索。\n\n2. 将厂区的工业设备年度深度维护、废物处理及物流运输业务，外包服务公司C。\n\n3. 由于墨西哥法律要求利润 10% 分红（PTU），通过外包公司 A 雇佣，我司账面上将不体现这批员工。\n\n4. 考虑到成本，拟选择报价最低的外包商 B。外包商 B 承诺只要按月支付服务费，所有劳务纠纷与合规责任由其自行承担，我司无需在政府部门做任何额外备案。\n\n5. 统一签署包含 30-180 天试用期或特定培训期的合同。\n\n6. 为应对生产峰值，实行“弹性工作制”，要求生产主管与核心技术员保持“全员待命”状态。",
+            "workflow": {
+              "steps": [
+                {
+                  "id": "doc-analysis",
+                  "name": "读取文档",
+                  "status": "pending",
+                  "icon": "✅",
+                  "details": null
+                },
+                {
+                  "id": "schema-extraction",
+                  "name": "提取关键信息",
+                  "status": "pending",
+                  "icon": "📋",
+                  "details": {
+                    "fields": [
+                      {
+                        "name": "文档类型",
+                        "value": "人力资源合规方案",
+                        "confidence": 0.95
+                      },
+                      {
+                        "name": "适用国家/地区",
+                        "value": "墨西哥",
+                        "confidence": 0.98
+                      },
+                      {
+                        "name": "核心动作点",
+                        "value": "人员外包、规避PTU、计算罚金、全员待命",
+                        "confidence": 0.92
+                      },
+                      {
+                        "name": "合作企业",
+                        "value": "人力资源公司 A、外包商 B、服务公司C",
+                        "confidence": 0.92
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "query-construction",
+                  "name": "构建查询问题",
+                  "status": "pending",
+                  "icon": "🔨",
+                  "details": {
+                    "queries": [
+                      "墨西哥 LFT 核心业务外包限制",
+                      "墨西哥外包 REPSE 备案强制要求",
+                      "墨西哥劳动法 PTU 规避与模拟用工定性",
+                      "..."
+                    ]
+                  }
+                },
+                {
+                  "id": "mcp-routing",
+                  "name": "调用专业工具",
+                  "status": "pending",
+                  "icon": "🧰",
+                  "details": {
+                    "servers": [
+                      {
+                        "id": "kb-server",
+                        "name": "知识库检索 Server",
+                        "status": "pending",
+                        "icon": "📚",
+                        "results": [
+                          {
+                            "title": "《联邦劳动法》第 12 条",
+                            "excerpt": "禁止人员分包... 实际受益方服务者方具备雇主身份。"
+                          },
+                          {
+                            "title": "《联邦劳动法》第 117 条",
+                            "excerpt": "劳动者将按照... 参与企业利润的分配。"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "web-server",
+                        "name": "网络检索 Server",
+                        "status": "pending",
+                        "icon": "🌐",
+                        "results": [
+                          {
+                            "source": "劳工部 (STPS) 执法动态",
+                            "excerpt": "严打逃避 PTU 的“模拟用工”，强制补缴五年并重罚。"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "calc-server",
+                        "name": "计算校验 Server",
+                        "status": "pending",
+                        "icon": "🧮",
+                        "results": [
+                          {
+                            "title": "罚金规模校验",
+                            "excerpt": "系统警告：罚款总额应为592.5万比索，而非59.25万。用户计算错误导致罚款被低估了10倍。",
+                            "calculation": "单次违规罚金 × 违规岗位数 × 风险系数 = 5万 × 100人 × 1.185 = 592.5万比索",
+                            "correction": "建议立即修正财务预算，将潜在罚款准备金从59.25万比索调整至592.5万比索，避免因预算不足导致的财务风险。"
+                          },
+                          {
+                            "title": "PTU利润分红计算核查",
+                            "excerpt": "检测到方案试图通过外包规避PTU，根据墨西哥法律应支付税前利润的10%作为员工分红。",
+                            "calculation": "应付PTU = 税前利润 × 10% × (工作天数权重50% + 工资权重50%)",
+                            "correction": "若违规被追溯，需补缴过去5年的PTU，建议直接合规操作或申请新公司首年豁免。"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "compliance-server",
+                        "name": "合规审查 Server",
+                        "status": "pending",
+                        "icon": "⚖️",
+                        "results": [
+                          {
+                            "companyName": "人力资源公司 A",
+                            "title": "方案中提到的外包商",
+                            "source": "从方案第1条、第3条中提取",
+                            "status": "unqualified",
+                            "excerpt": "系统已自动检索该公司在墨西哥劳工部(STPS)的注册信息，发现该公司缺少关键资质。",
+                            "checkItems": [
+                              {
+                                "name": "REPSE注册证书",
+                                "passed": false,
+                                "result": "未查询到有效REPSE注册号"
+                              },
+                              {
+                                "name": "营业执照",
+                                "passed": true,
+                                "result": "已核验，注册号: MX-HR-2019-4523"
+                              },
+                              {
+                                "name": "社保缴纳记录",
+                                "passed": false,
+                                "result": "过去6个月存在3次延迟缴纳记录"
+                              },
+                              {
+                                "name": "劳动纠纷历史",
+                                "passed": false,
+                                "result": "2023年有2起未结案劳动仲裁"
+                              }
+                            ],
+                            "riskLevel": "high",
+                            "riskDescription": "该外包商缺少REPSE资质，根据LFT第15条，发包方将承担连带责任。",
+                            "suggestion": "建议：立即更换具备REPSE资质的外包商，或将相关岗位转为直接雇佣，避免592.5万比索的潜在罚款风险。"
+                          },
+                          {
+                            "companyName": "外包商 B",
+                            "title": "方案中提到的低价外包商",
+                            "source": "从方案第4条中提取",
+                            "status": "warning",
+                            "excerpt": "该公司虽具备基本资质，但存在财务风险预警。",
+                            "checkItems": [
+                              {
+                                "name": "REPSE注册证书",
+                                "passed": true,
+                                "result": "有效，注册号: REPSE-2022-MX-0789"
+                              },
+                              {
+                                "name": "财务审计报告",
+                                "passed": false,
+                                "result": "最近一期审计意见为'持续经营存疑'"
+                              },
+                              {
+                                "name": "责任保险覆盖",
+                                "passed": true,
+                                "result": "已购买雇主责任险，额度500万比索"
+                              },
+                              {
+                                "name": "行业信誉评级",
+                                "passed": false,
+                                "result": "墨西哥商会评级: C级(最低报价档)"
+                              }
+                            ],
+                            "riskLevel": "medium",
+                            "riskDescription": "虽有REPSE资质，但财务状况不佳可能导致服务中断或员工权益受损。",
+                            "suggestion": "建议：要求外包商提供银行担保或选择财务状况更稳健的服务商，避免因其破产导致的连带赔偿责任。"
+                          },
+                          {
+                            "companyName": "服务公司C",
+                            "title": "方案中提到的设备维护外包商",
+                            "source": "从方案第2条中提取",
+                            "status": "qualified",
+                            "excerpt": "该公司资质齐全，符合墨西哥外包服务相关法规要求。",
+                            "checkItems": [
+                              {
+                                "name": "REPSE注册证书",
+                                "passed": true,
+                                "result": "有效，注册号: REPSE-2020-MX-1234"
+                              },
+                              {
+                                "name": "专业技术资质",
+                                "passed": true,
+                                "result": "持有工业设备维护甲级资质"
+                              },
+                              {
+                                "name": "社保缴纳记录",
+                                "passed": true,
+                                "result": "过去24个月全部按时缴纳"
+                              },
+                              {
+                                "name": "服务质量认证",
+                                "passed": true,
+                                "result": "ISO 9001:2015 质量管理体系认证"
+                              }
+                            ],
+                            "riskLevel": "low",
+                            "riskDescription": "该外包商资质完备，属于非核心业务外包，符合LFT第13条规定。",
+                            "suggestion": "该外包商可正常合作，建议在合同中明确服务标准和责任范围。"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "multi-channel-alignment",
+                  "name": "整合多方信息",
+                  "status": "pending",
+                  "icon": "🔄",
+                  "details": {
+                    "status": "MCP 节点数据已融合",
+                    "channels": [
+                      "法规法条库",
+                      "实时执法案例",
+                      "数值计算节点",
+                      "外部 API 验证"
+                    ]
+                  }
+                },
+                {
+                  "id": "multi-source-pk",
+                  "name": "交叉验证信息",
+                  "status": "pending",
+                  "icon": "⚔️",
+                  "details": {
+                    "analysis": [
+                      {
+                        "topic": "核心业务用工模式博弈",
+                        "knowledgeBase": "组装与质检属核心业务，严禁外包。",
+                        "webSource": "仅有保洁、安保等非核心岗位可维持外包。",
+                        "conclusion": "完全一致。原方案非法，必须转为直接雇佣。",
+                        "confidence": 0.99
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "quality-check",
+                  "name": "检查审核质量",
+                  "status": "pending",
+                  "icon": "🔍",
+                  "details": {
+                    "checks": [
+                      {
+                        "item": "逻辑自洽检查：中国式加班倾向",
+                        "passed": true,
+                        "note": "检测到典型的“中国式加班管理倾向”，全员待命极易触发工会红线。"
+                      },
+                      {
+                        "item": "风险评估量级确认",
+                        "passed": true,
+                        "note": "已融合计算校验 Server 结果，罚金风险调高至重度。"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "report-generation",
+                  "name": "生成审核报告",
+                  "status": "pending",
+                  "icon": "📄",
+                  "details": {
+                    "sections": [
+                      "核心违规点提取",
+                      "合规项确认",
+                      "整改建议输出"
+                    ]
+                  }
+                },
+                {
+                  "id": "plan-rewrite",
+                  "name": "优化改写方案",
+                  "status": "pending",
+                  "icon": "✍️",
+                  "details": {
+                    "rewrittenTitle": "《xx汽车零件生产公司墨西哥分厂人力资源合规与运营方案（优化版）》",
+                    "highlights": [
+                      "核心用工结构：直接雇佣与专业外包相结合",
+                      "风险保障机制：REPSE 资质穿透式审核",
+                      "利润分享管理：利用新公司首年豁免期",
+                      "工时与文化对齐：将“强制待命”修改为“自愿值班津贴制”"
+                    ],
+                    "sections": [
+                    {
+                      "title": "项目背景",
+                      "content": "为确保我司墨西哥工厂在法律框架下稳健运行，实现长期用工成本的可控与风险规避，特依据墨西哥《宪法》及《联邦劳动法（LFT）》制定本方案。"
+                    },
+                    {
+                      "title": "一、 核心用工结构：直接雇佣与专业外包相结合",
+                      "content": "**核心岗位直接雇佣**：鉴于组装线操作、质量检测等岗位属于我司企业宗旨（Objeto Social）中的主营业务活动，我司将对上述岗位员工实行直接雇佣模式，签署正式劳动合同。此举旨在规避 LFT 第 12 条严禁的“人员分包”风险，确保生产核心环节的合法性。\n**非核心业务专业化外包**：将厂区的工业设备年度深度维护、废物处理及物流运输业务，外包给具备合法资质的第三方公司。根据 LFT 第 13 条，此类业务不属于我司核心经济活动，依法允许外包，从而实现组织架构的扁平化并降低管理行政负担。"
+                    },
+                    {
+                      "title": "二、 风险保障机制：REPSE 资质穿透式审核",
+                      "content": "所有外包合作方必须提供其在劳工部（STPS）的有效 REPSE 注册号以规避 LFT 第 15 条规定的连带责任风险。"
+                    },
+                    {
+                      "title": "三、 利润分享（PTU）管理：利用政策豁免",
+                      "content": "**利用新公司首年豁免期**： 根据墨西哥《宪法》第 123 条 (d) 款及 LFT 第 126 条，作为新成立的制造企业，我司在运营第一年内依法免于支付利润分红（PTU）。"
+                    },
+                    {
+                      "title": "四、 人才筛选与降本：规范化试用期考核",
+                      "content": "**分级试用期制度**：对新入职员工实施 30 天试用期；管理及专业技术岗位延长至 180 天。\n**合法解雇评估**：建立内部“生产力、培训和能力培养联合委员会”。试用期结束前，经委员会考核认为员工不符合岗位要求者，我司将依据 LFT 第 39-A 条 终止劳动关系，且无需支付任何解雇赔偿金，从而大幅降低错峰用工及劣质人才更替成本。"
+                    },
+                    {
+                      "title": "五、 工会与集体谈判预案",
+                      "content": "**合规性介入**： 鉴于墨西哥 2019 年劳工改革，我司将建立透明的沟通机制，确保员工的“结社自由”，并利用 AI 智能体实时监测行业平均薪酬标准，制定极具竞争力的集体合同（CCT）模版，预防罢工风险。"
+                    },
+                    {
+                      "title": "五、 生产峰值与工时管理策略",
+                      "content": "**合规轮班制**：针对生产峰值，建立符合 LFT 标准的法定轮班机制。明确加班时长每日不超过3小时，每周不超过3次。\n**文化红线对齐**：针对核心技术员，将“强制待命”修改为“自愿值班津贴制”。通过增加“待命津贴”并在集体合同中备案，将管理冲突转化为合规协议，预防罢工。"
+                    }
+                    ]
+                  }
+                },
+                {
+                  "id": "response-generation",
+                  "name": "生成最终回复",
+                  "status": "pending",
+                  "icon": "💬",
+                  "details": {
+                    "outline": [
+                      "审查结论定调",
+                      "致命风险罗列",
+                      "重写方案引导"
+                    ]
+                  }
+                }
+              ]
+            },
+            "finalReport": {
+              "complianceScore": 30,
+              "summary": "重度财务及刑事违规风险：原草案存在多处法律硬伤，罚金计算存在 10 倍严重漏算。",
+              "compliantItems": [
+                {
+                  "title": "非核心业务专业化外包",
+                  "description": "工业设备维护、废物处理及物流运输业务不属于核心业务，符合 LFT 第 13 条。",
+                  "reference": "草案第 2 条"
+                },
+                {
+                  "title": "规范化试用期考核设置",
+                  "description": "签署包含 30-180 天试用期的合同符合 LFT 第 39-A 条。",
+                  "reference": "草案第 5 条"
+                }
+              ],
+              "issues": [
+                {
+                  "severity": "high",
+                  "title": "核心岗位非法外包",
+                  "location": "草案第 1 条",
+                  "description": "将组装线工人外包违反禁止“人员分包”规定。",
+                  "suggestion": "核心岗位必须转为直接雇佣。",
+                  "priority": 1
+                },
+                {
+                  "severity": "high",
+                  "title": "逃避 PTU 及罚金漏算",
+                  "location": "草案第 1、3 条",
+                  "description": "试图掩盖用工以逃避 PTU 被视为“模拟用工”。用户计算最高罚款59.25万比索为计算错误，实际应为 592.5 万。",
+                  "suggestion": "依照法律给予员工分红，申请新公司第一年豁免。",
+                  "priority": 1
+                },
+                {
+                  "severity": "high",
+                  "title": "外包商无资质连带责任",
+                  "location": "草案第 4 条",
+                  "description": "选择无备案的外包商将导致发包方承担补缴社保的连带责任。",
+                  "suggestion": "强制核验 REPSE 证书。",
+                  "priority": 2
+                },
+                {
+                  "severity": "medium",
+                  "title": "文化冲突与加班管理倾向",
+                  "location": "草案第 6 条",
+                  "description": "“全员待命”易被定性剥夺休息权，触发工会集体诉讼。",
+                  "suggestion": "删除全员待命，转化为“自愿值班协议”。",
+                  "priority": 3
+                }
+              ],
+              "recommendations": [
+                "已根据合规建议为您重新生成了《优化版方案》。",
+                "请将“强制待命”转化为合法的津贴制。",
+                "建立‘生产力联合委员会’保障试用期解雇的合法性。"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "history": [
+    {
+      "id": "session-1",
+      "title": "深度学习模型优化讨论",
+      "date": "2024-02-20",
+      "time": "14:30",
+      "preview": "讨论了深度学习模型的各种优化技术...",
+      "messageCount": 8
+    }
+  ],
+  "globalSearch": {
+    "recentSearches": [
+      "GDPR合规要求"
+    ],
+    "searchResults": [
+      {
+        "id": "result-1",
+        "title": "GDPR合规指南",
+        "type": "document",
+        "source": "内部知识库",
+        "excerpt": "关于GDPR（通用数据保护条例）的完整合规指南...",
+        "date": "2024-01-15",
+        "relevance": 95
+      }
+    ]
+  },
+  "knowledge": {
+    "categories": [
+      {
+        "id": "cat-1",
+        "name": "合规政策",
+        "icon": "📋",
+        "documentCount": 23,
+        "lastUpdated": "2024-02-20"
+      }
+    ],
+    "documents": [
+      {
+        "id": "doc-1",
+        "title": "GDPR合规指南 v3.2",
+        "category": "合规政策",
+        "size": "3.5 MB",
+        "format": "PDF",
+        "uploadDate": "2024-02-15",
+        "uploadBy": "张三",
+        "status": "已审核",
+        "tags": [
+          "GDPR"
+        ]
+      }
+    ],
+    "statistics": {
+      "totalDocuments": 98,
+      "totalSize": "245.6 MB",
+      "categoriesCount": 4,
+      "recentUploads": 15,
+      "pendingReview": 8
+    }
+  }
+}

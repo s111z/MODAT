@@ -125,15 +125,15 @@ class MockService {
    * 检查是否启用 Mock 模式
    */
   isEnabled() {
-    return this.config.enabled && this.config.mode === 'mock'
+    return this.config.enabled
   }
 
   /**
-   * 获取 QA 场景的下一个对话
+   * 获取 QA 场景的下一个对话（新版 config 已无此场景，返回 null）
    */
   getNextQAConversation() {
-    const conversations = this.config.scenarios.qa.conversations
-    if (conversations.length === 0) return null
+    const conversations = this.config.scenarios?.qa?.conversations
+    if (!conversations || conversations.length === 0) return null
 
     const conversation = conversations[this.currentConversationIndex.qa]
     this.currentConversationIndex.qa = (this.currentConversationIndex.qa + 1) % conversations.length
@@ -321,8 +321,40 @@ class MockService {
         })
       }
 
-      // 如果是并行任务
-      if (step.id === 'knowledge-retrieval' || step.id === 'web-retrieval') {
+      // 如果是 mcp-routing（多个 server 并行）
+      if (step.id === 'mcp-routing') {
+        await this.delay(600)
+        if (step.details && step.details.servers) {
+          for (const server of step.details.servers) {
+            server.status = 'processing'
+            if (onStepUpdate) {
+              onStepUpdate({
+                phase: 'workflow',
+                stepIndex: i,
+                status: 'in_progress',
+                step: step,
+                progressItem: server
+              })
+            }
+            await this.delay(600)
+            if (server.results) {
+              for (const result of server.results) {
+                if (onStepUpdate) {
+                  onStepUpdate({
+                    phase: 'workflow',
+                    stepIndex: i,
+                    status: 'in_progress',
+                    step: step,
+                    progressItem: result
+                  })
+                }
+                await this.delay(300)
+              }
+            }
+            server.status = 'done'
+          }
+        }
+      } else if (step.id === 'knowledge-retrieval' || step.id === 'web-retrieval') {
         // 知识库检索和网络检索并行
         if (step.id === 'knowledge-retrieval') {
           // 开始知识库检索
