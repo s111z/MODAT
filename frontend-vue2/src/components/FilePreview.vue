@@ -159,7 +159,7 @@ export default {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: white;
+  background: transparent;
 }
 
 /* 空状态 */
@@ -169,13 +169,13 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #c0c4cc;
+  color: #aaa;
 }
 
 .empty-icon {
   font-size: 64px;
   margin-bottom: 16px;
-  opacity: 0.3;
+  opacity: 0.25;
 }
 
 /* 顶部信息栏 */
@@ -184,8 +184,9 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  border-bottom: 1px solid #ebeef5;
-  background: #f9fafb;
+  border-bottom: 1px solid rgba(242, 153, 74, 0.2);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
   flex-shrink: 0;
 }
 
@@ -199,7 +200,7 @@ export default {
 
 .file-title i {
   font-size: 18px;
-  color: #409eff;
+  color: #f2994a;
   flex-shrink: 0;
 }
 
@@ -217,6 +218,17 @@ export default {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+/* 下载按钮统一橙色 */
+.header-actions >>> .el-button--primary {
+  background-color: #f2994a !important;
+  border-color: #f2994a !important;
+}
+
+.header-actions >>> .el-button--primary:hover {
+  background-color: #e8893a !important;
+  border-color: #e8893a !important;
 }
 
 /* 预览内容区 */
@@ -245,7 +257,7 @@ export default {
 
 .unsupported-icon {
   font-size: 64px;
-  color: #c0c4cc;
+  color: rgba(242, 153, 74, 0.3);
   margin-bottom: 16px;
 }
 
@@ -263,11 +275,13 @@ export default {
 }
 
 .file-detail {
-  background: #f5f7fa;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(242, 153, 74, 0.2);
   border-radius: 8px;
   padding: 16px 24px;
   margin-bottom: 24px;
   text-align: left;
+  backdrop-filter: blur(6px);
 }
 
 .detail-row {
@@ -303,5 +317,7 @@ export default {
   white-space: pre-wrap;
   word-break: break-all;
   font-family: 'PingFang SC', 'Microsoft YaHei', monospace;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(6px);
 }
 </style>
