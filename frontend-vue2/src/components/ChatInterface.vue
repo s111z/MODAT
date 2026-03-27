@@ -347,6 +347,9 @@ export default {
                 if (update.content) {
                   reviewPanel.updateDocumentContent(update.content)
                 }
+                if (update.fileName) {
+                  reviewPanel.updateFileName(update.fileName)
+                }
                 if (update.scanning) {
                   reviewPanel.startScanning()
                 }

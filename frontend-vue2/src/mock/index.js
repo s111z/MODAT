@@ -282,11 +282,12 @@ class MockService {
     }
     await this.delay(1000)
 
-    // 显示文档内容
+    // 显示文档内容（同时传递 fileName）
     if (onStepUpdate) {
       onStepUpdate({
         phase: 'document',
-        content: reviewData.documentContent
+        content: reviewData.documentContent,
+        fileName: conversation.fileName
       })
     }
 

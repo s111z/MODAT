@@ -511,6 +511,7 @@ export default {
       if (!this.completedPhases.includes(phaseName)) this.completedPhases.push(phaseName);
     },
     updateDocumentContent(content) { this.documentContent = content },
+    updateFileName(name) { this.$set(this.documentInfo, 'fileName', name) },
     startScanning() { this.isScanning = true },
     stopScanning() { this.isScanning = false },
     switchPhase(phase) {
