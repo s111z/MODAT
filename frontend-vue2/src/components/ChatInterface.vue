@@ -130,6 +130,17 @@ export default {
       if (files && files.length > 0) {
         const file = files[0]
 
+        if (mockService.isEnabled()) {
+          // Mock 模式：不上传，直接本地记录文件并切换模式
+          this.uploadedFiles.push(file)
+          this.serverFilename = file.name
+          this.$store.commit('SET_TASK_MODE', 'document-review')
+          this.$store.commit('SET_REVIEW_PHASE', 'document')
+          this.$message.success('文件已选择（Mock模式）')
+          e.target.value = ''
+          return
+        }
+
         try {
           // 上传文件到后端
           this.SET_LOADING(true)

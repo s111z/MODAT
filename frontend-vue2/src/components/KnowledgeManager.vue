@@ -309,6 +309,10 @@ export default {
     },
 
     async loadFileTree() {
+      if (mockService.isEnabled()) {
+        this.fileTree = {}
+        return
+      }
       this.filesLoading = true
       try {
         const res = await apiClient.getKnowledgeTree()
@@ -567,14 +571,15 @@ export default {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: white;
+  background: transparent;
 }
 
 /* 标题栏 */
 .header {
   padding: 16px 24px;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f9fafb;
+  border-bottom: 1px solid rgba(242, 153, 74, 0.2);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
 }
 
 .header h2 {
@@ -593,8 +598,9 @@ export default {
 /* Tab 切换栏 */
 .tab-bar {
   display: flex;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f9fafb;
+  border-bottom: 1px solid rgba(242, 153, 74, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
 }
 
 .tab-item {
@@ -609,19 +615,19 @@ export default {
 }
 
 .tab-item:hover {
-  color: #3b82f6;
+  color: #f2994a;
 }
 
 .tab-item.active {
-  color: #3b82f6;
+  color: #f2994a;
   font-weight: 600;
-  border-bottom-color: #3b82f6;
+  border-bottom-color: #f2994a;
 }
 
 /* 上传与同步区域 */
 .upload-section {
   padding: 16px 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid rgba(242, 153, 74, 0.15);
 }
 
 .action-row {
@@ -666,7 +672,7 @@ export default {
 /* 搜索区域 */
 .search-section {
   padding: 16px 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid rgba(242, 153, 74, 0.15);
 }
 
 .search-bar {
@@ -718,10 +724,14 @@ export default {
 
 .document-card {
   transition: all 0.3s;
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(242, 153, 74, 0.15) !important;
 }
 
 .document-card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(242, 153, 74, 0.15) !important;
 }
 
 .card-header {
@@ -739,7 +749,7 @@ export default {
 }
 
 .document-icon {
-  color: #3b82f6;
+  color: #f2994a;
   font-size: 16px;
 }
 
@@ -792,7 +802,7 @@ export default {
 }
 
 .category-group {
-  border: 1px solid #ebeef5;
+  border: 1px solid rgba(242, 153, 74, 0.2);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -802,14 +812,14 @@ export default {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: #f5f7fa;
+  background: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   user-select: none;
   transition: background 0.2s;
 }
 
 .category-header:hover {
-  background: #ebeef5;
+  background: rgba(242, 153, 74, 0.08);
 }
 
 .category-icon {
@@ -832,7 +842,7 @@ export default {
 }
 
 .category-files {
-  border-top: 1px solid #ebeef5;
+  border-top: 1px solid rgba(242, 153, 74, 0.15);
 }
 
 .file-row {
@@ -840,7 +850,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px 8px 32px;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid rgba(242, 153, 74, 0.08);
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -850,12 +860,12 @@ export default {
 }
 
 .file-row:hover {
-  background: #ecf5ff;
+  background: rgba(242, 153, 74, 0.08);
 }
 
 .file-row.selected {
-  background: #d9ecff;
-  border-left: 3px solid #409eff;
+  background: rgba(242, 153, 74, 0.15);
+  border-left: 3px solid #f2994a;
   padding-left: 29px;
 }
 
@@ -914,8 +924,9 @@ export default {
 /* 底部统计 */
 .footer {
   padding: 12px 24px;
-  border-top: 1px solid #e0e0e0;
-  background: #f9fafb;
+  border-top: 1px solid rgba(242, 153, 74, 0.2);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
   font-size: 14px;
   color: #6b7280;
   text-align: center;
