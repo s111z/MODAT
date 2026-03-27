@@ -352,6 +352,20 @@
               <li v-for="(rec, index) in finalReport.recommendations" :key="'rec-' + index">{{ rec }}</li>
             </ul>
           </div>
+          <div class="report-section risk-warning-section" v-if="finalReport.riskWarnings && finalReport.riskWarnings.length">
+            <h4>🚨 风险预警</h4>
+            <el-card v-for="(warn, index) in finalReport.riskWarnings" :key="'warn-' + index" class="report-card risk-warning-card" shadow="hover">
+              <div class="card-header">
+                <div class="card-title">{{ warn.title }}</div>
+                <el-tag type="danger" size="small">高度预警</el-tag>
+              </div>
+              <p class="card-description warn-description">{{ warn.description }}</p>
+              <div class="card-case-alert" v-if="warn.caseAlert">
+                <el-tag size="mini" type="warning">案例警示</el-tag>
+                <p>{{ warn.caseAlert }}</p>
+              </div>
+            </el-card>
+          </div>
         </div>
         <el-empty v-else description="暂无审核报告数据"></el-empty>
       </div>
@@ -1189,6 +1203,11 @@ export default {
 .issue-card.severity-low { border-left-color: #d4b895; }
 .recommendations-list { margin: 0; padding-left: 24px; }
 .recommendations-list li { margin-bottom: 8px; font-size: 14px; line-height: 1.6; color: #606266; }
+.risk-warning-section h4 { color: #c0392b; }
+.risk-warning-card { border-left: 4px solid #f56c6c; background: #fff8f8; }
+.warn-description { color: #333; font-size: 14px; line-height: 1.7; margin: 8px 0; }
+.card-case-alert { margin-top: 10px; padding: 10px 12px; background: #fff3cd; border-radius: 4px; border-left: 3px solid #e6a817; }
+.card-case-alert p { margin: 6px 0 0 0; font-size: 13px; color: #7d5a00; line-height: 1.6; }
 
 /* ======== 方案优化排版 ======== */
 .optimization-phase {
