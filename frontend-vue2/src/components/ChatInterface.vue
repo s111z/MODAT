@@ -136,7 +136,7 @@ export default {
           this.serverFilename = file.name
           this.$store.commit('SET_TASK_MODE', 'document-review')
           this.$store.commit('SET_REVIEW_PHASE', 'document')
-          this.$message.success('文件已选择（Mock模式）')
+          this.$message.success('文件已选择')
           e.target.value = ''
           return
         }
