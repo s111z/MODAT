@@ -4,7 +4,6 @@
 *.tar.xz
 chroma_db
 venv/
-*.md
 
 node_modules/
 
