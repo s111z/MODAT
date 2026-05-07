@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "mode": "api",
   "scenarios": {
     "documentReview": {

@@ -49,12 +49,21 @@ class EmbeddingModel:
         print(f"📍 设备: {device}")
 
         try:
+            import os as _os
+
             # 初始化 vllm LLM
+            # vllm_kwargs是本地显存不够的补丁，允许通过环境变量覆盖。
+            vllm_kwargs = {
+                "gpu_memory_utilization": float(_os.getenv("VLLM_GPU_MEMORY_UTILIZATION", "0.70")),
+                "max_model_len": int(_os.getenv("VLLM_MAX_MODEL_LEN", "8192")),
+            }
+            vllm_kwargs.update(kwargs)
+
             self.model = LLM(
                 model=self.model_name,
                 runner="pooling",
                 trust_remote_code=trust_remote_code,
-                **kwargs
+                **vllm_kwargs
             )
             print(f"✅ 模型加载成功!")
 
