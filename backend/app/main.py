@@ -117,8 +117,202 @@ class ReviewRequest(BaseModel):
     session_id: Optional[str] = None
     mode: Optional[str] = "review"
 
+class ReviewResponse(ChatResponse):
+    reviewData: Optional[Dict[str, Any]] = None
+    fileName: Optional[str] = None
+
 UpadateFilePath = os.path.join(base_dir_str, "backend/upload_files")
 KnowledgeFilePath = os.path.join(base_dir_str, "backend/knowledge_files")
+
+
+def _format_value(value: Any) -> str:
+    if value is None:
+        return "未提取"
+    if isinstance(value, (list, tuple)):
+        return "、".join(str(item) for item in value if item is not None) or "未提取"
+    if isinstance(value, dict):
+        return "; ".join(f"{k}: {_format_value(v)}" for k, v in value.items()) or "未提取"
+    return str(value)
+
+
+def _build_review_workflow_steps(result: Dict[str, Any]) -> List[Dict[str, Any]]:
+    structured_data = result.get("structured_data") or {}
+    review_queries = result.get("review_queries") or []
+    review_dimensions = result.get("review_dimensions") or []
+    knowledge_results = result.get("knowledge_results") or []
+    web_results = result.get("web_results") or []
+    inquiry_result = result.get("inquiry_result") or {}
+    rewrite_suggestions = result.get("rewrite_suggestions") or ""
+    review_report = result.get("review_report") or result.get("response") or ""
+
+    schema_fields = [
+        {
+            "name": str(key),
+            "value": _format_value(value),
+            "confidence": 0.9 if value else 0.3,
+        }
+        for key, value in structured_data.items()
+    ]
+    if not schema_fields:
+        doc_info = result.get("doc_info") or {}
+        schema_fields = [
+            {"name": "文件名", "value": doc_info.get("filename", "未提取"), "confidence": 0.8},
+            {"name": "文件类型", "value": doc_info.get("file_type", "未提取"), "confidence": 0.8},
+            {"name": "字符数", "value": str(doc_info.get("char_count", "未提取")), "confidence": 0.8},
+        ]
+
+    kb_items = [
+        {
+            "title": item.get("metadata", {}).get("source") or item.get("source") or f"知识库结果 {index + 1}",
+            "excerpt": item.get("content") or item.get("text") or item.get("excerpt") or "",
+            "source": item.get("metadata", {}).get("source") or item.get("source") or "知识库",
+        }
+        for index, item in enumerate(knowledge_results[:5])
+    ]
+    web_items = [
+        {
+            "title": item.get("title") or item.get("source") or f"网络结果 {index + 1}",
+            "excerpt": item.get("content") or item.get("snippet") or item.get("excerpt") or "",
+            "source": item.get("url") or item.get("source") or "网络检索",
+        }
+        for index, item in enumerate(web_results[:5])
+    ]
+
+    quality_score = inquiry_result.get("quality_score") if isinstance(inquiry_result, dict) else None
+    issues = inquiry_result.get("issues", []) if isinstance(inquiry_result, dict) else []
+    quality_checks = []
+    if quality_score is not None:
+        quality_checks.append({
+            "item": "审核质量评分",
+            "passed": quality_score >= 70,
+            "note": f"质量评分: {quality_score}",
+        })
+    for issue in issues[:4]:
+        quality_checks.append({
+            "item": issue.get("type", "自查问题"),
+            "passed": False,
+            "note": issue.get("description", "发现潜在问题"),
+        })
+    if not quality_checks:
+        quality_checks.append({"item": "审核自查", "passed": True, "note": "已完成审核自查"})
+
+    return [
+        {
+            "id": "doc-analysis",
+            "name": "读取文档",
+            "icon": "",
+            "status": "done",
+            "details": {"summary": result.get("doc_info", {})},
+        },
+        {
+            "id": "schema-extraction",
+            "name": "提取关键信息",
+            "icon": "",
+            "status": "done",
+            "details": {"fields": schema_fields},
+        },
+        {
+            "id": "query-construction",
+            "name": "构建查询问题",
+            "icon": "",
+            "status": "done",
+            "details": {"queries": review_queries or review_dimensions or ["基于文档内容构建审核查询"]},
+        },
+        {
+            "id": "multi-source-pk",
+            "name": "多源检索与裁决",
+            "icon": "",
+            "status": "done",
+            "details": {
+                "analysis": [
+                    {
+                        "topic": "知识库与网络检索",
+                        "knowledgeBase": f"命中知识库 {len(knowledge_results)} 条",
+                        "webSource": f"命中网络 {len(web_results)} 条",
+                        "conclusion": result.get("conflict_summary") or "已完成多源信息裁决",
+                    }
+                ],
+                "knowledgeResults": kb_items,
+                "webResults": web_items,
+            },
+        },
+        {
+            "id": "quality-check",
+            "name": "审核自查",
+            "icon": "",
+            "status": "done",
+            "details": {"checks": quality_checks},
+        },
+        {
+            "id": "plan-rewrite",
+            "name": "方案优化",
+            "icon": "",
+            "status": "done",
+            "details": {
+                "rewrittenTitle": "优化建议",
+                "highlights": [line.strip("- ") for line in rewrite_suggestions.splitlines() if line.strip()][:5],
+                "sections": [
+                    {
+                        "title": "优化建议",
+                        "content": rewrite_suggestions or "审核流程已完成，暂无单独的方案重写建议。",
+                    }
+                ],
+            },
+        },
+        {
+            "id": "report-generation",
+            "name": "生成审核报告",
+            "icon": "",
+            "status": "done",
+            "progress": 3,
+            "details": {"sections": ["审核概要", "风险分析", "问题建议", "审核结论"]},
+        },
+    ]
+
+
+def _build_review_report(result: Dict[str, Any]) -> Dict[str, Any]:
+    inquiry_result = result.get("inquiry_result") or {}
+    issues = inquiry_result.get("issues", []) if isinstance(inquiry_result, dict) else []
+    quality_score = inquiry_result.get("quality_score") if isinstance(inquiry_result, dict) else None
+    compliance_score = int(quality_score) if isinstance(quality_score, (int, float)) else 80
+    report_text = result.get("review_report") or result.get("response") or "审核报告已生成"
+
+    return {
+        "summary": report_text[:300] + ("..." if len(report_text) > 300 else ""),
+        "complianceScore": max(0, min(100, compliance_score)),
+        "compliantItems": [
+            {
+                "title": "审核流程完成",
+                "description": "系统已完成文档解析、结构化抽取、多源检索、裁决和审核报告生成。",
+                "reference": "MODAT 审核工作流",
+            }
+        ],
+        "issues": [
+            {
+                "title": issue.get("type", "自查问题"),
+                "priority": index + 1,
+                "severity": "medium",
+                "location": "审核自查",
+                "description": issue.get("description", "发现潜在问题"),
+                "suggestion": issue.get("suggestion", "请结合审核报告进一步核查。"),
+            }
+            for index, issue in enumerate(issues[:5])
+        ],
+        "recommendations": [line.strip("- ") for line in (result.get("rewrite_suggestions") or "").splitlines() if line.strip()][:5],
+        "riskWarnings": [],
+        "rawReport": report_text,
+    }
+
+
+def _build_review_data(result: Dict[str, Any], filename: str) -> Dict[str, Any]:
+    return {
+        "documentContent": result.get("doc_text", ""),
+        "documentInfo": result.get("doc_info", {}),
+        "fileName": filename,
+        "workflow": {"steps": _build_review_workflow_steps(result)},
+        "finalReport": _build_review_report(result),
+        "rawSteps": result.get("steps", []),
+    }
 
 # ====== 核心 API ======
 
@@ -240,7 +434,7 @@ async def chat_stream(request: ChatRequest):
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
-@app.post("/api/review")
+@app.post("/api/review", response_model=ReviewResponse)
 async def review(request: ReviewRequest):
     """处理方案审核需求（使用审核工作流）"""
     try:
@@ -284,10 +478,12 @@ async def review(request: ReviewRequest):
         session_store.add_message(sid, "user", request.message)
         session_store.add_message(sid, "assistant", response_text)
 
-        return ChatResponse(
+        return ReviewResponse(
             response=response_text,
             steps=result.get("steps", []),
             session_id=sid,
+            fileName=result.get("doc_info", {}).get("filename") or request.filename,
+            reviewData=_build_review_data(result, result.get("doc_info", {}).get("filename") or request.filename),
         )
     except HTTPException:
         raise

@@ -129,6 +129,7 @@ export default {
       const files = e.target.files
       if (files && files.length > 0) {
         const file = files[0]
+        const defaultReviewMessage = '请审核这份方案'
 
         if (mockService.isEnabled()) {
           // Mock 模式：不上传，直接本地记录文件并切换模式
@@ -136,8 +137,9 @@ export default {
           this.serverFilename = file.name
           this.$store.commit('SET_TASK_MODE', 'document-review')
           this.$store.commit('SET_REVIEW_PHASE', 'document')
-          this.$message.success('文件已选择')
+          this.$message.success('文件已选择，开始自动审核')
           e.target.value = ''
+          await this.startReview(defaultReviewMessage, { autoAddUserMessage: true })
           return
         }
 
@@ -153,10 +155,13 @@ export default {
           this.$store.commit('SET_TASK_MODE', 'document-review')
           this.$store.commit('SET_REVIEW_PHASE', 'document')
 
-          this.$message.success('文件上传成功')
+          this.$message.success('文件上传成功，开始自动审核')
+          this.SET_LOADING(false)
+          await this.$nextTick()
+          await this.startReview(defaultReviewMessage, { autoAddUserMessage: true })
         } catch (error) {
-          console.error('文件上传失败:', error)
-          this.$message.error('文件上传失败: ' + error.message)
+          console.error('文件上传或审核失败:', error)
+          this.$message.error('文件上传或审核失败: ' + error.message)
         } finally {
           this.SET_LOADING(false)
           // 清空文件输入
@@ -188,30 +193,18 @@ export default {
       this.SET_LOADING(true)
 
       try {
-        if (mockService.isEnabled()) {
-          // ===== Mock 模式 =====
-          if (taskMode === 'document-review') {
-            await this.triggerDocumentReview(query)
-          } else {
-            await this.triggerKnowledgeQA(query)
-          }
+        if (taskMode === 'document-review' && this.serverFilename) {
+          await this.startReview(query)
+        } else if (mockService.isEnabled()) {
+          await this.triggerKnowledgeQA(query)
         } else {
-          // ===== 真实 API 模式 =====
-          if (taskMode === 'document-review' && this.serverFilename) {
-            // 文档审核 → 调用 /api/review
-            await this.sendReview({
-              message: query,
-              filename: this.serverFilename
-            })
-          } else {
-            // 知识问答 → 调用 /api/chat/stream（降级到 /api/chat）
-            await this.sendMessageStream({ message: query, mode: 'qa' })
-          }
+          // 知识问答 → 调用 /api/chat/stream（降级到 /api/chat）
+          await this.sendMessageStream({ message: query, mode: 'qa' })
         }
       } catch (error) {
         console.error('API失败:', error)
 
-        if (!mockService.isEnabled()) {
+        if (!mockService.isEnabled() && !(taskMode === 'document-review' && this.serverFilename)) {
           try {
             // 流式失败降级到普通 /api/chat
             const response = await api.chat({ message: query, mode: 'qa' })
@@ -239,10 +232,86 @@ export default {
           this.SET_LOADING(false)
         }
       }
+    },
 
-      // 清空上传的文件
+    // 触发方案审核流程
+    async startReview(message, options = {}) {
+      if (options.autoAddUserMessage) {
+        this.ADD_MESSAGE({
+          id: Date.now().toString(),
+          role: 'user',
+          content: message,
+          files: this.uploadedFiles.map(f => f.name)
+        })
+      }
+
+      if (mockService.isEnabled()) {
+        await this.triggerDocumentReview(message)
+        this.uploadedFiles = []
+        this.serverFilename = ''
+        return
+      }
+
+      if (!this.serverFilename) {
+        throw new Error('缺少已上传文件，请先上传方案文件')
+      }
+
+      const reviewPanel = this.getReviewPanelInstance()
+      if (reviewPanel) {
+        reviewPanel.switchPhase('workflow')
+        reviewPanel.initWorkflow(this.buildPendingReviewWorkflow())
+      }
+      this.$store.commit('SET_REVIEW_PHASE', 'workflow')
+
+      const response = await this.sendReview({
+        message,
+        filename: this.serverFilename
+      })
+
+      this.applyReviewResponse(response)
       this.uploadedFiles = []
       this.serverFilename = ''
+    },
+
+    buildPendingReviewWorkflow() {
+      return [
+        { id: 'doc-analysis', name: '读取文档', icon: '', status: 'in_progress', details: null },
+        { id: 'schema-extraction', name: '提取关键信息', icon: '', status: 'pending', details: { fields: [] } },
+        { id: 'query-construction', name: '构建查询问题', icon: '', status: 'pending', details: { queries: [] } },
+        { id: 'multi-source-pk', name: '多源检索与裁决', icon: '', status: 'pending', details: { analysis: [] } },
+        { id: 'quality-check', name: '审核自查', icon: '', status: 'pending', details: { checks: [] } },
+        { id: 'plan-rewrite', name: '方案优化', icon: '', status: 'pending', details: { sections: [] } },
+        { id: 'report-generation', name: '生成审核报告', icon: '', status: 'pending', details: { sections: ['审核概要', '风险分析', '问题建议', '审核结论'] } }
+      ]
+    },
+
+    applyReviewResponse(response) {
+      const reviewPanel = this.getReviewPanelInstance()
+      const reviewData = response && response.reviewData
+
+      if (!reviewPanel || !reviewData) {
+        return
+      }
+
+      if (reviewData.documentContent) {
+        reviewPanel.updateDocumentContent(reviewData.documentContent)
+      }
+      if (reviewData.fileName || response.fileName) {
+        reviewPanel.updateFileName(reviewData.fileName || response.fileName)
+      }
+      if (reviewData.workflow && reviewData.workflow.steps) {
+        reviewPanel.initWorkflow(reviewData.workflow.steps)
+        reviewPanel.markPhaseAsCompleted('workflow')
+      }
+      if (reviewData.finalReport) {
+        reviewPanel.updateFinalReport(reviewData.finalReport)
+      }
+      const rewriteNode = (reviewData.workflow && reviewData.workflow.steps || []).find(step => step.id === 'plan-rewrite')
+      if (rewriteNode && rewriteNode.status === 'done') {
+        reviewPanel.markPhaseAsCompleted('optimization')
+      }
+      reviewPanel.switchPhase('result')
+      this.$store.commit('SET_REVIEW_PHASE', 'result')
     },
 
     // 触发知识问答流程

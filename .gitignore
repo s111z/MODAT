@@ -16,3 +16,5 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+/backend/upload_files
+/frontend-vue2/dist
