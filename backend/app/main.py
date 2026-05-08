@@ -10,7 +10,7 @@ if base_dir_str not in sys.path:
 if app_dir_str not in sys.path:
     sys.path.insert(0, app_dir_str)
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
@@ -31,6 +31,8 @@ from graph.qa_workflow import create_qa_workflow
 from graph.qa_state import QAState
 from graph.review_workflow import create_review_workflow
 from graph.review_state import ReviewState
+from graph.review_events import build_workflow_init_event
+from graph.review_stream_runner import run_review_streaming
 from graph.vectordb_workflow import create_vectordb_workflow
 from graph.vectordb_state import VectorDBState
 from session.session_store import session_store
@@ -314,6 +316,45 @@ def _build_review_data(result: Dict[str, Any], filename: str) -> Dict[str, Any]:
         "rawSteps": result.get("steps", []),
     }
 
+
+def _build_initial_review_state(request: ReviewRequest, sid: str, filepath: str) -> ReviewState:
+    return {
+        "query": request.message,
+        "session_id": sid,
+        "filepath": filepath,
+        "desensitized_query": "",
+        "pii_mapping": {},
+        "intent": "document_review",
+        "has_history": False,
+        "has_policy_change": True,
+        "doc_info": {},
+        "doc_text": "",
+        "structured_data": {},
+        "review_queries": [],
+        "review_dimensions": [],
+        "knowledge_results": [],
+        "web_results": [],
+        "resolved_context": "",
+        "conflict_found": False,
+        "conflict_summary": "",
+        "inquiry_result": {},
+        "rewrite_suggestions": "",
+        "review_report": "",
+        "response": "",
+        "steps": [],
+    }
+
+
+def _format_sse(event: Dict[str, Any]) -> str:
+    return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+
+SSE_HEADERS = {
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+}
+
 # ====== 核心 API ======
 
 @app.get("/")
@@ -323,6 +364,33 @@ async def root():
         "version": "2.0.0",
         "status": "running"
     }
+
+@app.get("/api/test-stream")
+async def test_stream(count: int = 5, interval: float = 1.0):
+    """最小化流式传输测试接口，不经过 vLLM 或审核工作流。"""
+    safe_count = max(1, min(count, 100))
+    safe_interval = max(0.0, min(interval, 10.0))
+
+    async def generate():
+        for index in range(1, safe_count + 1):
+            yield _format_sse({
+                "type": "test_stream",
+                "index": index,
+                "count": safe_count,
+                "interval": safe_interval,
+                "message": f"test-stream chunk {index}",
+                "timestamp": datetime.now().isoformat(timespec="milliseconds"),
+            })
+            await asyncio.sleep(safe_interval)
+
+        yield _format_sse({
+            "type": "test_stream_done",
+            "count": safe_count,
+            "message": "test-stream completed",
+            "timestamp": datetime.now().isoformat(timespec="milliseconds"),
+        })
+
+    return StreamingResponse(generate(), media_type="text/event-stream", headers=SSE_HEADERS)
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -445,31 +513,7 @@ async def review(request: ReviewRequest):
         if not os.path.exists(filepath):
             raise HTTPException(status_code=404, detail=f"文件不存在: {request.filename}")
 
-        state: ReviewState = {
-            "query": request.message,
-            "session_id": sid,
-            "filepath": filepath,
-            "desensitized_query": "",
-            "pii_mapping": {},
-            "intent": "document_review",
-            "has_history": False,
-            "has_policy_change": True,
-            "doc_info": {},
-            "doc_text": "",
-            "structured_data": {},
-            "review_queries": [],
-            "review_dimensions": [],
-            "knowledge_results": [],
-            "web_results": [],
-            "resolved_context": "",
-            "conflict_found": False,
-            "conflict_summary": "",
-            "inquiry_result": {},
-            "rewrite_suggestions": "",
-            "review_report": "",
-            "response": "",
-            "steps": [],
-        }
+        state: ReviewState = _build_initial_review_state(request, sid, filepath)
 
         workflow = create_review_workflow()
         result = workflow.invoke(state)
@@ -489,6 +533,89 @@ async def review(request: ReviewRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/review/stream")
+async def review_stream(request: ReviewRequest, raw_request: Request):
+    """流式处理方案审核需求。"""
+    sid = request.session_id or str(uuid.uuid4())
+    filepath = os.path.join(UpadateFilePath, request.filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail=f"文件不存在: {request.filename}")
+
+    async def generate():
+        state: ReviewState = _build_initial_review_state(request, sid, filepath)
+        last_result: Dict[str, Any] = {}
+
+        async def emit(event: Dict[str, Any]):
+            event.setdefault("session_id", sid)
+            event.setdefault("seq", emit.seq)
+            emit.seq += 1
+            yield_event = _format_sse(event)
+            await queue.put(yield_event)
+        emit.seq = 1
+
+        queue: asyncio.Queue[str] = asyncio.Queue()
+
+        async def run():
+            nonlocal last_result
+            try:
+                await emit({
+                    "type": "meta",
+                    "session_id": sid,
+                    "fileName": request.filename,
+                })
+                last_result = await run_review_streaming(
+                    state=state,
+                    emit=emit,
+                    build_workflow_steps=_build_review_workflow_steps,
+                    build_review_report=_build_review_report,
+                    filename=request.filename,
+                )
+                response_text = last_result.get("response") or last_result.get("review_report") or "审核完成"
+                session_store.add_message(sid, "user", request.message)
+                session_store.add_message(sid, "assistant", response_text)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                await emit({
+                    "type": "error",
+                    "status": "error",
+                    "message": str(e),
+                })
+
+        task = asyncio.create_task(run())
+        try:
+            while True:
+                if await raw_request.is_disconnected():
+                    task.cancel()
+                    break
+
+                try:
+                    event_text = await asyncio.wait_for(queue.get(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    if task.done():
+                        break
+                    continue
+
+                yield event_text
+                await asyncio.sleep(0)
+
+                try:
+                    event_payload = json.loads(event_text.removeprefix("data: ").strip())
+                except Exception:
+                    event_payload = {}
+                if event_payload.get("type") in {"final", "error"}:
+                    break
+        finally:
+            if not task.done():
+                task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    return StreamingResponse(generate(), media_type="text/event-stream", headers=SSE_HEADERS)
 
 # ====== 文件上传 API ======
 

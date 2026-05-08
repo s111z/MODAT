@@ -129,6 +129,77 @@ class APIClient {
     }
   }
 
+  /**
+   * 文档审核流式接口
+   * @param {Object} request - { filename: string, message: string, mode?: string }
+   * @param {Function} onData - SSE 事件回调
+   * @param {Function} onError - 错误回调
+   * @param {Function} onComplete - 完成回调
+   * @param {AbortSignal} signal - 可选取消信号
+   */
+  async reviewStream(request, onData, onError, onComplete, signal) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/review/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(request),
+        signal
+      })
+
+      if (!response.ok) {
+        throw new Error(`文档审核流请求失败: ${response.statusText}`)
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) {
+          if (buffer.trim()) {
+            this.parseSSEBlocks(buffer + '\n\n', onData)
+          }
+          if (onComplete) onComplete()
+          break
+        }
+
+        buffer += decoder.decode(value, { stream: true })
+        const blocks = buffer.split('\n\n')
+        buffer = blocks.pop() || ''
+        this.parseSSEBlocks(blocks.join('\n\n') + (blocks.length ? '\n\n' : ''), onData)
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        if (onComplete) onComplete()
+        return
+      }
+      if (onError) onError(error)
+      throw error
+    }
+  }
+
+  parseSSEBlocks(text, onData) {
+    const blocks = text.split('\n\n').filter(block => block.trim())
+    for (const block of blocks) {
+      const dataLines = block
+        .split('\n')
+        .filter(line => line.startsWith('data: '))
+        .map(line => line.slice(6))
+
+      if (!dataLines.length) continue
+
+      try {
+        const event = JSON.parse(dataLines.join('\n'))
+        if (onData) onData(event)
+      } catch (e) {
+        console.error('解析审核流事件失败:', e, dataLines.join('\n'))
+      }
+    }
+  }
+
   // ========== 文件上传接口 ==========
 
   /**

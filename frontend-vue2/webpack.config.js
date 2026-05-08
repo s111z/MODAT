@@ -3,6 +3,11 @@ const webpack = require('webpack'); // 1. 必须引入 webpack 核心库
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { VueLoaderPlugin } = require('vue-loader');
 
+const isSseApiRequest = (url = '') => (
+  url.includes('/api/test-stream') ||
+  url.includes('/api/review/stream')
+);
+
 module.exports = {
   entry: './src/main.js',
   output: {
@@ -64,6 +69,7 @@ module.exports = {
     port: 6008,
     hot: true,
     open: true,
+    compress: false,
     historyApiFallback: true,
     client: {
       webSocketURL: 'auto://0.0.0.0:0/ws'
@@ -71,7 +77,12 @@ module.exports = {
     proxy: {
       '/api': {
         target: 'http://localhost:6006',
-        changeOrigin: true
+        changeOrigin: true,
+        onProxyReq(proxyReq, req) {
+          if (isSseApiRequest(req.url)) {
+            proxyReq.setHeader('Accept-Encoding', 'identity');
+          }
+        }
       }
     }
   }

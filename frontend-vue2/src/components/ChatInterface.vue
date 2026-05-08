@@ -125,6 +125,16 @@ export default {
     ...mapMutations('chat', ['SET_INPUT', 'ADD_MESSAGE', 'SET_LOADING']),
     ...mapActions('chat', ['sendMessage', 'sendMessageStream', 'sendReview']),
 
+    createAssistantMessage(content = '') {
+      const id = (Date.now() + 1).toString()
+      this.ADD_MESSAGE({
+        id,
+        role: 'assistant',
+        content
+      })
+      return id
+    },
+
     async handleFileSelect(e) {
       const files = e.target.files
       if (files && files.length > 0) {
@@ -258,17 +268,23 @@ export default {
 
       const reviewPanel = this.getReviewPanelInstance()
       if (reviewPanel) {
+        if (reviewPanel.resetReviewState) reviewPanel.resetReviewState('workflow')
         reviewPanel.switchPhase('workflow')
         reviewPanel.initWorkflow(this.buildPendingReviewWorkflow())
       }
       this.$store.commit('SET_REVIEW_PHASE', 'workflow')
 
-      const response = await this.sendReview({
-        message,
-        filename: this.serverFilename
-      })
+      await api.reviewStream(
+        {
+          message,
+          filename: this.serverFilename,
+          mode: 'review'
+        },
+        this.handleReviewEvent,
+        this.handleReviewError,
+        this.handleReviewComplete
+      )
 
-      this.applyReviewResponse(response)
       this.uploadedFiles = []
       this.serverFilename = ''
     },
@@ -283,6 +299,93 @@ export default {
         { id: 'plan-rewrite', name: '方案优化', icon: '', status: 'pending', details: { sections: [] } },
         { id: 'report-generation', name: '生成审核报告', icon: '', status: 'pending', details: { sections: ['审核概要', '风险分析', '问题建议', '审核结论'] } }
       ]
+    },
+
+    handleReviewEvent(event) {
+      const reviewPanel = this.getReviewPanelInstance()
+      if (!reviewPanel || !event) return
+
+      switch (event.type) {
+        case 'meta':
+          if (reviewPanel.resetReviewState) reviewPanel.resetReviewState('workflow')
+          if (event.fileName) reviewPanel.updateFileName(event.fileName)
+          this.$store.commit('SET_REVIEW_PHASE', 'workflow')
+          break
+        case 'workflow_init':
+          reviewPanel.initWorkflow(event.steps || [])
+          reviewPanel.switchPhase('workflow')
+          this.$store.commit('SET_REVIEW_PHASE', 'workflow')
+          break
+        case 'node_start':
+          reviewPanel.patchWorkflowStep(event.stepId, { status: 'in_progress' })
+          if (event.message) reviewPanel.appendNodeLog(event.stepId, event.message)
+          break
+        case 'node_log':
+          if (event.stepId) reviewPanel.appendNodeLog(event.stepId, event.message)
+          break
+        case 'command_log':
+          if (reviewPanel.appendCommandLog) reviewPanel.appendCommandLog(event)
+          break
+        case 'document_patch':
+          reviewPanel.patchDocumentContent(event.content || '', event.documentInfo || {})
+          break
+        case 'document_chunk':
+          reviewPanel.appendDocumentContent(event.content || '', event.documentInfo || {})
+          break
+        case 'step_patch':
+          reviewPanel.patchWorkflowStep(event.stepId, event.patch || {})
+          break
+        case 'report_chunk':
+          reviewPanel.appendReportChunk(event.section, event.content || '')
+          break
+        case 'report_item':
+          reviewPanel.appendReportItem(event.section, event.item)
+          break
+        case 'optimization_chunk':
+          reviewPanel.appendOptimizationChunk(event)
+          break
+        case 'result_snapshot':
+          if (event.resultSnapshot) reviewPanel.patchFinalReport(event.resultSnapshot)
+          break
+        case 'final':
+          if (event.reviewData) {
+            this.applyReviewResponse({ reviewData: event.reviewData, fileName: event.fileName })
+          } else if (event.resultSnapshot) {
+            reviewPanel.patchFinalReport(event.resultSnapshot)
+          }
+          reviewPanel.switchPhase('result')
+          this.$store.commit('SET_REVIEW_PHASE', 'result')
+          this.ADD_MESSAGE({
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: event.message || '审核完成，已在左侧生成审核报告和方案优化建议。'
+          })
+          this.SET_LOADING(false)
+          break
+        case 'error':
+          if (event.stepId) reviewPanel.patchWorkflowStep(event.stepId, { status: 'error' })
+          this.ADD_MESSAGE({
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: '审核失败：' + (event.message || '未知错误')
+          })
+          this.SET_LOADING(false)
+          break
+      }
+    },
+
+    handleReviewError(error) {
+      console.error('审核流错误:', error)
+      this.ADD_MESSAGE({
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: '审核流式接口失败：' + (error && error.message ? error.message : '未知错误')
+      })
+      this.SET_LOADING(false)
+    },
+
+    handleReviewComplete() {
+      this.SET_LOADING(false)
     },
 
     applyReviewResponse(response) {

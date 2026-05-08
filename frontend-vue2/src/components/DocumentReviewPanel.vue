@@ -63,6 +63,12 @@
                   <span class="step-name">{{ step.name }}</span>
                 </div>
                 <div class="step-right">
+                  <el-badge
+                    v-if="step.logs && step.logs.length"
+                    :value="step.logs.length"
+                    class="log-count-badge"
+                    type="warning"
+                  />
                   <span v-if="step.status === 'done'" class="status-text success">
                     已完成 <i class="el-icon-caret-bottom collapse-arrow"></i>
                   </span>
@@ -77,6 +83,26 @@
             </template>
 
             <div class="step-detail-content">
+              <div class="node-log-panel">
+                <div class="node-log-header">
+                  <div>
+                    <i class="el-icon-tickets"></i>
+                    <span>节点过程日志</span>
+                  </div>
+                  <span class="node-log-subtitle">同步后端命令行中的审核进度</span>
+                </div>
+                <div v-if="step.logs && step.logs.length" class="node-log-list">
+                  <div
+                    v-for="(log, logIndex) in step.logs"
+                    :key="logIndex"
+                    class="node-log-row"
+                  >
+                    <span class="node-log-time">{{ log.time }}</span>
+                    <span class="node-log-message">{{ log.message }}</span>
+                  </div>
+                </div>
+                <div v-else class="node-log-empty">等待该节点输出过程日志...</div>
+              </div>
               
               <div v-if="step.id === 'schema-extraction' && step.details" class="schema-fields">
                 <el-table :data="step.details.fields" size="small" stripe border>
@@ -309,6 +335,40 @@
             </div>
           </el-collapse-item>
         </el-collapse>
+
+        <div class="command-log-panel">
+          <div class="command-log-header">
+            <div class="command-log-title">
+              <i class="el-icon-monitor"></i>
+              <span>后端命令行实时日志</span>
+              <el-tag size="mini" type="warning">{{ commandLogs.length }} 条</el-tag>
+            </div>
+            <div class="command-log-actions">
+              <el-switch
+                v-model="commandLogAutoScroll"
+                active-text="自动滚动"
+                inactive-text="暂停滚动"
+                size="mini"
+              ></el-switch>
+              <el-button type="text" size="mini" @click="clearCommandLogs">清空</el-button>
+            </div>
+          </div>
+          <div ref="commandLogList" class="command-log-list">
+            <div
+              v-for="(log, logIndex) in commandLogs"
+              :key="logIndex"
+              :class="['command-log-row', 'level-' + String(log.level || 'info').toLowerCase()]"
+            >
+              <span class="command-log-time">{{ log.time }}</span>
+              <span class="command-log-level">{{ log.level }}</span>
+              <span class="command-log-source">{{ log.logger }}</span>
+              <span class="command-log-message">{{ log.message }}</span>
+            </div>
+            <div v-if="!commandLogs.length" class="command-log-empty">
+              等待后端命令行输出；审核开始后会实时同步 logger / print / stderr 日志。
+            </div>
+          </div>
+        </div>
       </div>
 
       <div v-show="currentPhase === 'result'" class="result-phase">
@@ -430,7 +490,10 @@ export default {
       documentInfo: {},
       workflowSteps: [],
       activeSteps: ['mcp-routing'],
-      expandedServers: [], 
+      expandedServers: [],
+      commandLogs: [],
+      commandLogAutoScroll: true,
+      maxCommandLogLines: 1000,
       finalReport: {},
       
       autoJumpTimer1: null,
@@ -524,7 +587,38 @@ export default {
     markPhaseAsCompleted(phaseName) {
       if (!this.completedPhases.includes(phaseName)) this.completedPhases.push(phaseName);
     },
+    resetReviewState(initialPhase = 'document') {
+      this.clearJumpTimers();
+      this.currentPhase = initialPhase;
+      this.completedPhases = [];
+      this.isScanning = false;
+      this.documentContent = '';
+      this.documentInfo = {};
+      this.workflowSteps = [];
+      this.activeSteps = [];
+      this.expandedServers = [];
+      this.commandLogs = [];
+      this.commandLogAutoScroll = true;
+      this.finalReport = {};
+      if (initialPhase) this.markPhaseAsCompleted(initialPhase);
+    },
     updateDocumentContent(content) { this.documentContent = content },
+    appendDocumentContent(content, documentInfo = {}) {
+      if (content) this.documentContent += content;
+      if (documentInfo && Object.keys(documentInfo).length) {
+        Object.keys(documentInfo).forEach(key => this.$set(this.documentInfo, key, documentInfo[key]));
+        if (documentInfo.filename) this.$set(this.documentInfo, 'fileName', documentInfo.filename);
+      }
+      this.markPhaseAsCompleted('document');
+    },
+    patchDocumentContent(content, documentInfo = {}) {
+      this.documentContent = content || '';
+      if (documentInfo && Object.keys(documentInfo).length) {
+        Object.keys(documentInfo).forEach(key => this.$set(this.documentInfo, key, documentInfo[key]));
+        if (documentInfo.filename) this.$set(this.documentInfo, 'fileName', documentInfo.filename);
+      }
+      this.markPhaseAsCompleted('document');
+    },
     updateFileName(name) { this.$set(this.documentInfo, 'fileName', name) },
     startScanning() { this.isScanning = true },
     stopScanning() { this.isScanning = false },
@@ -534,7 +628,85 @@ export default {
     },
     initWorkflow(steps) {
       // 保留原始状态，如果不传默认置为 pending
-      this.workflowSteps = steps.map(step => ({ ...step, status: step.status || 'pending' }))
+      this.workflowSteps = steps.map(step => ({
+        ...step,
+        status: step.status || 'pending',
+        logs: step.logs || []
+      }))
+    },
+    patchWorkflowStep(stepId, patch = {}) {
+      if (!stepId) return;
+      const index = this.workflowSteps.findIndex(step => step.id === stepId);
+      if (index === -1) return;
+
+      const currentStep = this.workflowSteps[index];
+      const updatedStep = {
+        ...currentStep,
+        ...patch,
+        details: {
+          ...(currentStep.details || {}),
+          ...(patch.details || {})
+        },
+        logs: patch.logs || currentStep.logs || []
+      };
+
+      this.workflowSteps.splice(index, 1, updatedStep);
+
+      if (patch.status === 'in_progress' || patch.status === 'processing') {
+        if (!this.activeSteps.includes(stepId)) this.activeSteps.push(stepId);
+      }
+
+      if (patch.status === 'done') {
+        this.markPhaseAsCompleted('workflow');
+        if (stepId === 'plan-rewrite') this.markPhaseAsCompleted('optimization');
+        if (stepId === 'report-generation') this.markPhaseAsCompleted('result');
+      }
+    },
+    appendNodeLog(stepId, message) {
+      if (!stepId || !message) return;
+      const step = this.workflowSteps.find(item => item.id === stepId);
+      if (!step) return;
+      const logs = step.logs || [];
+      this.patchWorkflowStep(stepId, {
+        logs: [
+          ...logs,
+          {
+            time: new Date().toLocaleTimeString(),
+            message
+          }
+        ]
+      });
+      if (!this.activeSteps.includes(stepId)) {
+        this.activeSteps.push(stepId);
+      }
+      this.$nextTick(() => {
+        const lists = this.$el.querySelectorAll('.node-log-list');
+        lists.forEach(list => {
+          list.scrollTop = list.scrollHeight;
+        });
+      });
+    },
+    appendCommandLog(event = {}) {
+      const message = event.message || event.content;
+      if (!message) return;
+      this.commandLogs.push({
+        time: event.timestamp || new Date().toLocaleTimeString(),
+        level: event.level || 'INFO',
+        logger: event.logger || event.source || 'console',
+        message
+      });
+      if (this.commandLogs.length > this.maxCommandLogLines) {
+        this.commandLogs.splice(0, this.commandLogs.length - this.maxCommandLogLines);
+      }
+      if (this.commandLogAutoScroll) {
+        this.$nextTick(() => {
+          const list = this.$refs.commandLogList;
+          if (list) list.scrollTop = list.scrollHeight;
+        });
+      }
+    },
+    clearCommandLogs() {
+      this.commandLogs = [];
     },
     updateWorkflowStep(stepIndex, updates) {
   if (stepIndex >= 0 && stepIndex < this.workflowSteps.length) {
@@ -568,6 +740,54 @@ export default {
     updateFinalReport(report) { 
       this.finalReport = report;
       this.markPhaseAsCompleted('result');
+    },
+    patchFinalReport(snapshot = {}) {
+      this.finalReport = {
+        ...(this.finalReport || {}),
+        ...snapshot,
+        compliantItems: snapshot.compliantItems || this.finalReport.compliantItems || [],
+        issues: snapshot.issues || this.finalReport.issues || [],
+        recommendations: snapshot.recommendations || this.finalReport.recommendations || [],
+        riskWarnings: snapshot.riskWarnings || this.finalReport.riskWarnings || []
+      };
+      this.markPhaseAsCompleted('result');
+    },
+    appendReportChunk(section, content) {
+      if (!content) return;
+      if (!this.finalReport) this.finalReport = {};
+      if (!this.finalReport.rawReport) this.$set(this.finalReport, 'rawReport', '');
+      this.finalReport.rawReport += content;
+      if (section === 'summary') {
+        const oldSummary = this.finalReport.summary || '';
+        this.$set(this.finalReport, 'summary', oldSummary + content);
+      }
+      if (!this.finalReport.complianceScore) this.$set(this.finalReport, 'complianceScore', 80);
+      this.markPhaseAsCompleted('result');
+    },
+    appendReportItem(section, item) {
+      if (!section || !item) return;
+      if (!this.finalReport[section]) this.$set(this.finalReport, section, []);
+      this.finalReport[section].push(item);
+      this.markPhaseAsCompleted('result');
+    },
+    appendOptimizationChunk(event) {
+      const stepId = 'plan-rewrite';
+      const index = this.workflowSteps.findIndex(step => step.id === stepId);
+      if (index === -1) return;
+      const step = this.workflowSteps[index];
+      const details = step.details || {};
+      const sections = [...(details.sections || [])];
+      sections.push({
+        title: event.section || '优化建议',
+        content: event.content || ''
+      });
+      this.patchWorkflowStep(stepId, {
+        status: 'in_progress',
+        details: {
+          ...details,
+          sections
+        }
+      });
     },
     isPhaseCompleted(index) { return this.completedPhases.includes(this.phases[index].name) },
     handleTabClick(phaseName) {
@@ -688,6 +908,84 @@ export default {
   border-radius: 0 0 8px 8px;
   box-shadow: 0 2px 8px rgba(246, 165, 90, 0.1);
 }
+.command-log-panel {
+  margin-top: 16px;
+  border: 2px solid #FDE2BE;
+  border-radius: 8px;
+  background: #111827;
+  box-shadow: 0 2px 8px rgba(246, 165, 90, 0.1);
+  overflow: hidden;
+}
+.command-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #FFFDF7 0%, #FFF9E6 100%);
+  border-bottom: 1px solid #FDE2BE;
+}
+.command-log-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #E47728;
+}
+.command-log-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.command-log-actions ::v-deep .el-switch__label {
+  color: #B07A43;
+  font-size: 12px;
+}
+.command-log-list {
+  height: 260px;
+  overflow-y: auto;
+  padding: 12px 14px;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  background: #111827;
+  color: #d1d5db;
+}
+.command-log-row {
+  display: grid;
+  grid-template-columns: 72px 58px 136px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.command-log-time { color: #9ca3af; }
+.command-log-level {
+  color: #93c5fd;
+  font-weight: 700;
+}
+.command-log-source {
+  color: #fbbf24;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.command-log-message {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #e5e7eb;
+}
+.command-log-row.level-warning .command-log-level,
+.command-log-row.level-warn .command-log-level { color: #f59e0b; }
+.command-log-row.level-error .command-log-level,
+.command-log-row.level-critical .command-log-level { color: #f87171; }
+.command-log-row.level-debug .command-log-level { color: #a78bfa; }
+.command-log-empty {
+  color: #9ca3af;
+  padding: 18px 4px;
+  text-align: center;
+}
 .flat-workflow-steps ::v-deep .el-collapse-item__header {
   border-bottom: 1px solid #FFF9E6;
   padding: 0 20px;
@@ -710,7 +1008,8 @@ export default {
 .step-left { display: flex; align-items: center; gap: 12px; }
 .step-icon { font-size: 18px; filter: drop-shadow(0 1px 2px rgba(228, 119, 40, 0.2)); }
 .step-name { font-size: 14px; color: #E47728; font-weight: 600; }
-.step-right { display: flex; align-items: center; }
+.step-right { display: flex; align-items: center; gap: 10px; }
+.log-count-badge { margin-right: 2px; }
 
 /* 状态文字样式 */
 .status-text { font-size: 13px; display: flex; align-items: center; gap: 4px; font-weight: 500; }
@@ -730,6 +1029,57 @@ export default {
   border-left: 3px solid #FDE2BE;
   margin: 0 12px 12px 12px;
   border-radius: 0 0 6px 6px;
+}
+.node-log-panel {
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid #FDE2BE;
+  border-radius: 8px;
+  background: #FFFDF7;
+}
+.node-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #E47728;
+}
+.node-log-header i { margin-right: 6px; }
+.node-log-subtitle {
+  font-size: 12px;
+  font-weight: 400;
+  color: #B07A43;
+}
+.node-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.node-log-row {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #303133;
+}
+.node-log-time {
+  color: #909399;
+  flex-shrink: 0;
+  font-family: Consolas, Monaco, monospace;
+}
+.node-log-message {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.node-log-empty {
+  font-size: 12px;
+  color: #B07A43;
+  line-height: 1.6;
 }
 
 .clickable-box {
@@ -1155,6 +1505,11 @@ export default {
 .conclusion { padding: 8px; background: #f0f9eb; border-radius: 4px; font-size: 12px; }
 .generation-info { padding: 16px; background: #f0f9ff; border-radius: 4px; border: 1px solid #c6e2ff;}
 .generation-title { margin-bottom: 12px; font-size: 13px; color: #409eff; font-weight: 500; display: flex; align-items: center; justify-content: space-between; }
+.step-logs { margin-top: 12px; padding: 10px; border: 1px solid #FDE2BE; border-radius: 6px; background: #FFFDF7; }
+.step-logs-title { font-size: 13px; font-weight: bold; color: #E47728; margin-bottom: 8px; }
+.step-log-item { display: flex; gap: 8px; font-size: 12px; line-height: 1.6; color: #606266; }
+.log-time { color: #909399; flex-shrink: 0; }
+.log-message { color: #303133; }
 
 /* ======== 审核报告 ======== */
 .result-phase {
