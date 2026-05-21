@@ -45,6 +45,7 @@ from datetime import datetime
 app = FastAPI(title="智能文档评审问答系统 API")
 
 _startup_logger = logging.getLogger("startup")
+_chat_logger = logging.getLogger("chat")
 
 @app.on_event("startup")
 async def startup_preload():
@@ -53,24 +54,33 @@ async def startup_preload():
     loop = asyncio.get_event_loop()
 
     def _preload():
-        # 强制离线模式，禁止 HuggingFace Hub 发起任何网络请求
         import os as _os
-        _os.environ.setdefault("HF_HUB_OFFLINE", "1")
-        _os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+        from core.config import settings
+
+        # vLLM 路线使用服务器本地模型，避免误连 HuggingFace；
+        # CPU SentenceTransformers 路线允许首次下载轻量模型。
+        if settings.embedding_model_type.lower() == "vllm":
+            _os.environ.setdefault("HF_HUB_OFFLINE", "1")
+            _os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
         # 1. 预加载 Embedding 模型
         _startup_logger.info("▶ 正在加载 Embedding 模型...")
         try:
-            from core.embedding import get_embedding_model
-            from core.config import settings
-            # 拼接完整本地路径，避免被当成 HuggingFace Hub ID
-            model_path = _os.path.join(settings.model_base_dir, settings.embedding_model_name)
-            _startup_logger.info("  模型路径: %s", model_path)
-            get_embedding_model(
-                model_name=model_path,
-                device=settings.embedding_device,
-            )
-            _startup_logger.info("✔ Embedding 模型加载完成")
+            if settings.embedding_model_type.lower() == "vllm":
+                from core.embedding import get_embedding_model
+                # 拼接完整本地路径，避免被当成 HuggingFace Hub ID
+                model_path = _os.path.join(settings.model_base_dir, settings.embedding_model_name)
+                _startup_logger.info("  模型路径: %s", model_path)
+                get_embedding_model(
+                    model_name=model_path,
+                    device=settings.embedding_device,
+                )
+                _startup_logger.info("✔ Embedding 模型加载完成")
+            else:
+                _startup_logger.info(
+                    "Embedding 模型类型为 %s，将在首次向量检索时延迟加载",
+                    settings.embedding_model_type,
+                )
         except Exception as e:
             _startup_logger.warning("⚠ Embedding 模型加载失败（将在首次请求时重试）: %s", e)
 
@@ -107,6 +117,7 @@ class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
     mode: Optional[str] = "qa"  # "qa" 或 "review"
+    filename: Optional[str] = None
 
 class ChatResponse(BaseModel):
     response: str
@@ -125,6 +136,36 @@ class ReviewResponse(ChatResponse):
 
 UpadateFilePath = os.path.join(base_dir_str, "backend/upload_files")
 KnowledgeFilePath = os.path.join(base_dir_str, "backend/knowledge_files")
+
+
+def _build_chat_query(request: ChatRequest) -> str:
+    """为普通 Chatbot 问答附加上传文档内容，不触发方案审核工作流。"""
+    if not request.filename:
+        return request.message
+
+    filepath = os.path.join(UpadateFilePath, request.filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail=f"文件不存在: {request.filename}")
+
+    from agents.doc_parser_agent import DocParserAgent
+
+    parsed = DocParserAgent().parse(filepath)
+    doc_text = (parsed.get("text") or "").strip()
+    if not doc_text:
+        raise HTTPException(status_code=400, detail="上传文档未解析出可分析文本")
+
+    doc_text = doc_text[:12000]
+    _chat_logger.info(
+        "普通问答已附加上传文档内容: filename=%s chars=%s",
+        request.filename,
+        len(doc_text),
+    )
+    return (
+        "请基于以下上传文档内容回答用户问题。\n\n"
+        f"【文件名】{parsed.get('filename', request.filename)}\n"
+        f"【文档内容】\n{doc_text}\n\n"
+        f"【用户问题】\n{request.message}"
+    )
 
 
 def _format_value(value: Any) -> str:
@@ -402,9 +443,11 @@ async def chat(request: ChatRequest):
         # 获取对话历史
         history = session_store.build_context(sid)
 
+        query = _build_chat_query(request)
+
         # 初始化QA工作流状态
         state: QAState = {
-            "query": request.message,
+            "query": query,
             "session_id": sid,
             "desensitized_query": "",
             "pii_mapping": {},
@@ -437,6 +480,8 @@ async def chat(request: ChatRequest):
             steps=result.get("steps", []),
             session_id=sid,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -448,8 +493,10 @@ async def chat_stream(request: ChatRequest):
             sid = request.session_id or str(uuid.uuid4())
             history = session_store.build_context(sid)
 
+            query = _build_chat_query(request)
+
             state: QAState = {
-                "query": request.message,
+                "query": query,
                 "session_id": sid,
                 "desensitized_query": "",
                 "pii_mapping": {},

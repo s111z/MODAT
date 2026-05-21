@@ -59,7 +59,7 @@ class DeepSeekClient:
                 url,
                 json=payload,
                 headers=headers,
-                timeout=60.0
+                timeout=settings.deepseek_timeout
             )
             response.raise_for_status()
             return response.json()

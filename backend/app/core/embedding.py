@@ -7,8 +7,12 @@
 
 import torch
 from typing import List, Optional, Union, Tuple
-from vllm import LLM
 import numpy as np
+
+try:
+    from vllm import LLM
+except ImportError:
+    LLM = None
 
 
 class EmbeddingModel:
@@ -49,10 +53,17 @@ class EmbeddingModel:
         print(f"📍 设备: {device}")
 
         try:
+            if LLM is None:
+                raise RuntimeError(
+                    "vllm 未安装，无法加载本地 Embedding 模型。"
+                    "如需启用向量检索，请安装 vllm 并配置可用的本地模型路径；"
+                    "仅预览后端 API 时可忽略此错误。"
+                )
+
             import os as _os
 
             # 初始化 vllm LLM
-            # vllm_kwargs是本地显存不够的补丁，允许通过环境变量覆盖。
+            # dev 分支补丁：允许在显存较紧张时通过环境变量调小 vLLM 配置。
             vllm_kwargs = {
                 "gpu_memory_utilization": float(_os.getenv("VLLM_GPU_MEMORY_UTILIZATION", "0.70")),
                 "max_model_len": int(_os.getenv("VLLM_MAX_MODEL_LEN", "8192")),

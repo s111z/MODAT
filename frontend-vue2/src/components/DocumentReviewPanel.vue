@@ -10,7 +10,12 @@
         }]"
         @click="handleTabClick(phase.name)"
       >
-        <span class="phase-icon">{{ phase.icon }}</span>
+        <component
+          :is="phase.icon"
+          class="phase-icon"
+          :size="16"
+          :stroke-width="2"
+        />
         <span class="phase-label">{{ phase.label }}</span>
       </div>
     </div>
@@ -27,6 +32,17 @@
             <pre>{{ documentContent }}</pre>
             <div v-if="isScanning" class="scan-line"></div>
           </div>
+        </div>
+        <div class="review-upload-action">
+          <el-button
+            type="warning"
+            icon="el-icon-document-add"
+            class="review-upload-btn"
+            :loading="isScanning"
+            @click="$emit('request-review-upload')"
+          >
+            方案审核
+          </el-button>
         </div>
         <div v-if="isScanning" class="scanning-status">
           <i class="el-icon-loading"></i>
@@ -463,8 +479,16 @@
 </template>
 
 <script>
+import { FileText, GitBranch, ClipboardCheck, Sparkles } from 'lucide-vue'
+
 export default {
   name: 'DocumentReviewPanel',
+  components: {
+    FileText,
+    GitBranch,
+    ClipboardCheck,
+    Sparkles
+  },
   props: {
     reviewData: {
       type: Object,
@@ -478,10 +502,10 @@ export default {
   data() {
     return {
       phases: [
-        { name: 'document', label: '文档预览', icon: '' },
-        { name: 'workflow', label: '工作流程', icon: '' },
-        { name: 'result', label: '审核报告', icon: '' },
-        { name: 'optimization', label: '方案优化', icon: '' }
+        { name: 'document', label: '文档预览', icon: 'FileText' },
+        { name: 'workflow', label: '工作流程', icon: 'GitBranch' },
+        { name: 'result', label: '审核报告', icon: 'ClipboardCheck' },
+        { name: 'optimization', label: '方案优化', icon: 'Sparkles' }
       ],
       currentPhase: 'document',
       completedPhases: ['document'],
@@ -817,9 +841,10 @@ export default {
 /* ======== Tabs ======== */
 .phase-tabs {
   display: flex;
-  background: linear-gradient(to right, #e8d0aa, #e4c89e);
-  border-bottom: 2px solid #fff;
-  height: 60px;
+  background: #FDFBF9;
+  border-bottom: 1px solid #E5E0DA;
+  height: 64px;
+  padding: 0 14px;
 }
 .phase-tab {
   flex: 1;
@@ -829,23 +854,39 @@ export default {
   gap: 8px;
   height: 100%;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: background-color 0.3s ease, color 0.3s ease;
   color: #7a6850;
-  font-size: 16px;
-  font-weight: bold;
-  letter-spacing: 1px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
   position: relative;
+  border-radius: 12px 12px 0 0;
 }
 .phase-tab:hover:not(.active) {
-  color: #5c4e3b;
-  background: rgba(255, 255, 255, 0.2);
+  color: #5c4632;
+  background: #F4ECE4;
 }
 .phase-tab.active {
-  color: #4a3a28;
-  font-weight: bold;
-  background: rgba(255, 255, 255, 0.5);
+  color: #4A2F1B;
+  font-weight: 700;
+  background: #ffffff;
 }
-.phase-content { flex: 1; overflow-y: auto; padding: 16px; background: #ffffff; }
+.phase-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 42px;
+  height: 3px;
+  border-radius: 999px;
+  background: #6B3F24;
+  transform: translateX(-50%);
+}
+.phase-icon {
+  color: currentColor;
+  flex-shrink: 0;
+}
+.phase-content { flex: 1; overflow-y: auto; padding: 20px; background: #ffffff; }
 
 /* ======== 文档预览 ======== */
 .document-phase { height: 100%; display: flex; flex-direction: column; }
@@ -854,10 +895,11 @@ export default {
 .document-content-wrapper {
   flex: 1;
   overflow: hidden;
-  border: 2px solid #FDE2BE;
-  border-radius: 6px;
+  border: 1px solid #E8D5C4;
+  border-radius: 12px;
   position: relative;
   background: linear-gradient(135deg, #FFFDF7 0%, #FFF9E6 100%);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.05);
 }
 .document-content {
   height: 100%;
@@ -866,12 +908,32 @@ export default {
   background: #ffffff;
   position: relative;
   margin: 8px;
-  border-radius: 4px;
+  border-radius: 12px;
 }
 .document-content pre { margin: 0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: #303133; }
 .document-content.scanning { overflow: hidden; position: relative; }
 .scan-line { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #F6A55A, transparent); box-shadow: 0 0 10px #F6A55A; animation: scan 2s linear infinite; z-index: 10; }
 @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+.review-upload-action {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+.review-upload-btn {
+  min-width: 132px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: #F2994A;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8px 18px rgba(242, 153, 74, 0.22);
+}
+.review-upload-btn:hover,
+.review-upload-btn:focus {
+  background: #E88935;
+  color: #fff;
+}
 .scanning-status {
   display: flex;
   align-items: center;
@@ -879,8 +941,8 @@ export default {
   margin-top: 12px;
   padding: 10px 12px;
   background: linear-gradient(135deg, #FFF9E6 0%, #FFFDF7 100%);
-  border: 1px solid #FDE2BE;
-  border-radius: 4px;
+  border: 1px solid #E8D5C4;
+  border-radius: 12px;
   color: #E47728;
   font-size: 14px;
 }
@@ -889,10 +951,10 @@ export default {
 .workflow-header-card {
   background: linear-gradient(135deg, #FFFDF7 0%, #FFF9E6 100%);
   padding: 20px 20px 16px 20px;
-  border: 2px solid #FDE2BE;
+  border: 1px solid #E8D5C4;
   border-bottom: none;
-  border-radius: 8px 8px 0 0;
-  box-shadow: 0 2px 8px rgba(246, 165, 90, 0.1);
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.05);
 }
 .workflow-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
 .title-icon { font-size: 18px; color: #E47728; }
@@ -903,17 +965,17 @@ export default {
 .flat-workflow-steps {
   border-top: none;
   background: #ffffff;
-  border: 2px solid #FDE2BE;
-  border-top: 1px dashed #FDE2BE;
-  border-radius: 0 0 8px 8px;
-  box-shadow: 0 2px 8px rgba(246, 165, 90, 0.1);
+  border: 1px solid #E8D5C4;
+  border-top: 1px dashed #E8D5C4;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.05);
 }
 .command-log-panel {
   margin-top: 16px;
-  border: 2px solid #FDE2BE;
-  border-radius: 8px;
+  border: 1px solid #E8D5C4;
+  border-radius: 12px;
   background: #111827;
-  box-shadow: 0 2px 8px rgba(246, 165, 90, 0.1);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.05);
   overflow: hidden;
 }
 .command-log-header {

@@ -34,6 +34,16 @@
         >
           <img src="@/assets/images/side4.png" class="sidebar-icon" alt="chat" />
         </div>
+
+        <!-- 方案审核图标 -->
+        <div
+          @click="setSidebar('review')"
+          :class="['sidebar-btn', { active: sidebarActive === 'review' }]"
+          title="方案审核"
+          aria-label="方案审核"
+        >
+          <i class="el-icon-document-checked sidebar-el-icon"></i>
+        </div>
       </div>
     </div>
 
@@ -49,11 +59,19 @@
             :steps="workflowSteps"
             ref="agentWorkflow"
           />
-          <AgentThinking v-else-if="taskMode === 'qa'" />
+          <AgentThinking
+            v-else-if="taskMode === 'qa'"
+          />
 
           <!-- 文档审核模式显示 DocumentReviewPanel -->
-          <DocumentReviewPanel v-else />
+          <DocumentReviewPanel v-else @request-review-upload="triggerReviewUpload" />
         </template>
+
+        <!-- 方案审核 -->
+        <DocumentReviewPanel
+          v-else-if="sidebarActive === 'review'"
+          @request-review-upload="triggerReviewUpload"
+        />
 
         <!-- 历史列表 -->
         <HistoryList v-else-if="sidebarActive === 'history'" />
@@ -76,7 +94,7 @@
           :file="selectedFile"
         />
         <!-- 其他模式显示聊天界面 -->
-        <ChatInterface v-else />
+        <ChatInterface v-else ref="chatInterface" />
       </div>
     </div>
   </div>
@@ -119,6 +137,15 @@ export default {
 
     setSidebar(panel) {
       this.SET_SIDEBAR_ACTIVE(panel)
+      if (panel === 'chat') {
+        this.$store.commit('SET_TASK_MODE', 'qa')
+        this.$store.commit('SET_REVIEW_PHASE', 'document')
+        this.workflowSteps = []
+      }
+      if (panel === 'review') {
+        this.$store.commit('SET_TASK_MODE', 'document-review')
+        this.$store.commit('SET_REVIEW_PHASE', 'document')
+      }
       // 切换到非知识库模式时清空选中文件
       if (panel !== 'knowledge') {
         this.selectedFile = null
@@ -127,6 +154,18 @@ export default {
 
     onFileSelected(file) {
       this.selectedFile = file
+    },
+
+    triggerReviewUpload() {
+      this.SET_SIDEBAR_ACTIVE('review')
+      this.$store.commit('SET_TASK_MODE', 'document-review')
+      this.$store.commit('SET_REVIEW_PHASE', 'document')
+      this.selectedFile = null
+      this.$nextTick(() => {
+        if (this.$refs.chatInterface && this.$refs.chatInterface.openReviewFilePicker) {
+          this.$refs.chatInterface.openReviewFilePicker()
+        }
+      })
     }
   },
   mounted() {
@@ -153,43 +192,56 @@ export default {
 
 /* 侧边栏 */
 .sidebar {
-  width: 64px;
+  width: 72px;
   background: white;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid #E8D5C4;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 24px;
+  padding-top: 32px;
   flex-shrink: 0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.05);
   z-index: 100;
 }
 
 .sidebar-buttons {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 32px;
 }
 
 .sidebar-btn {
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
   color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-btn:hover {
   color: #6b7280;
+  background: rgba(232, 213, 196, 0.22);
 }
 
 .sidebar-btn.active {
-  color: #3b82f6;
+  color: #E47728;
+  background: rgba(232, 213, 196, 0.28);
 }
 
 .sidebar-btn svg {
   width: 100%;
   height: 100%;
+}
+
+.sidebar-el-icon {
+  font-size: 25px;
+  color: #9ca3af;
+  transition: all 0.2s;
 }
 
 /* 主内容区 */
@@ -204,7 +256,7 @@ export default {
 .left-panel {
   width: 45%;
   height: 100vh;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid #E8D5C4;
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(8px);
   overflow-y: auto;
@@ -213,8 +265,8 @@ export default {
 .panel-header-tabs {
   display: flex;
   background-color: #e8d5c4; /* 截图中的浅啡色背景 */
-  padding: 0 10px;
-  height: 48px;
+  padding: 0 16px;
+  height: 56px;
   align-items: center;
 }
 
@@ -236,7 +288,7 @@ export default {
 .left-panel {
   width: 45%;
   background: transparent; /* 截图左侧主要是纯白底色 */
-  border-right: 1px solid #d1d5db;
+  border-right: 1px solid #E8D5C4;
 }
 
 /* 右侧面板 */
@@ -273,7 +325,17 @@ export default {
   /* filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.5)); */
 }
 
+.sidebar-btn.active .sidebar-el-icon {
+  color: #E47728;
+  transform: scale(1.1);
+}
+
 .sidebar-btn:hover .sidebar-icon {
   opacity: 0.9;
+}
+
+.sidebar-btn:hover .sidebar-el-icon {
+  color: #E47728;
+  transform: scale(1.05);
 }
 </style>

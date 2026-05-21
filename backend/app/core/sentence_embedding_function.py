@@ -48,12 +48,19 @@ class SentenceTransformerEmbeddingFunction(EmbeddingFunction):
         else:
             logger.info(f"正在从 HuggingFace 加载 SentenceTransformer 模型: {model_name_or_path}")
 
-        try:
-            self.model = SentenceTransformer(model_name_or_path, device=device)
-            logger.info(f"✅ 模型加载成功，维度: {self.model.get_sentence_embedding_dimension()}")
-        except Exception as e:
-            logger.error(f"❌ 模型加载失败: {e}")
-            raise
+        self.device = device
+        self._model = None
+
+    @property
+    def model(self):
+        if self._model is None:
+            try:
+                self._model = SentenceTransformer(self.model_name, device=self.device)
+                logger.info(f"✅ 模型加载成功，维度: {self._model.get_sentence_embedding_dimension()}")
+            except Exception as e:
+                logger.error(f"❌ 模型加载失败: {e}")
+                raise
+        return self._model
 
     def __call__(self, input: List[str]) -> Embeddings:
         """

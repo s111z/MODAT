@@ -8,7 +8,7 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-    sidebarActive: 'chat', // 'chat' | 'history' | 'search' | 'knowledge'
+    sidebarActive: 'chat', // 'chat' | 'history' | 'search' | 'knowledge' | 'review'
     taskMode: 'qa',        // 'qa' | 'document-review'
     reviewPhase: 'document', // 'document' | 'workflow' | 'result'
     layoutMode: 'double'   // 'single' | 'double' - 单栏或双栏布局

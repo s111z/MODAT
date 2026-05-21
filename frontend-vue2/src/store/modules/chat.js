@@ -1,5 +1,19 @@
 import api from '@/api'
 
+function getAgentStepMeta(content = '') {
+  const text = String(content)
+  const rules = [
+    { test: /脱敏|敏感信息|PII/i, type: 'privacy', title: '信息脱敏' },
+    { test: /意图|模式/i, type: 'intent', title: '意图识别' },
+    { test: /Query|查询|处理查询|拆解/i, type: 'planning', title: '查询拆解' },
+    { test: /知识库|相关文档|检索完成/i, type: 'searching', title: '知识库检索' },
+    { test: /网络|web/i, type: 'web', title: '网络检索' },
+    { test: /冲突|裁决|对齐/i, type: 'resolving', title: '冲突裁决' },
+    { test: /生成回复|回复生成|生成完成/i, type: 'generating', title: '回复生成' }
+  ]
+  return rules.find(rule => rule.test.test(text)) || { type: 'thinking', title: '任务处理' }
+}
+
 export default {
   namespaced: true,
   state: {
@@ -81,8 +95,27 @@ export default {
       }
     },
 
-    async sendMessageStream({ commit, state, rootState }, { message, mode }) {
+    async sendMessageStream({ commit, state, rootState }, { message, mode, filename }) {
       commit('SET_LOADING', true)
+      commit('agent/SET_ACTIVE', true, { root: true })
+
+      commit('agent/ADD_STEP', {
+        id: `round-${Date.now()}`,
+        type: 'thinking',
+        title: filename ? '继续文档问答' : '开始新问题',
+        content: message,
+        timestamp: Date.now()
+      }, { root: true })
+
+      if (filename) {
+        commit('agent/ADD_STEP', {
+          id: `doc-${Date.now()}`,
+          type: 'parsing',
+          title: '读取上传文档',
+          content: '已接收上传文档，发送问题后将作为 Chatbot 的参考内容。',
+          timestamp: Date.now()
+        }, { root: true })
+      }
 
       // 添加空的助手消息，后续追加内容
       const assistantMsgId = (Date.now() + 1).toString()
@@ -94,7 +127,7 @@ export default {
 
       try {
         await api.chatStream(
-          { message, mode: mode || rootState.taskMode },
+          { message, mode: mode || rootState.taskMode, filename },
           (event) => {
             // 处理流式数据
             if (event.type === 'response') {
@@ -104,12 +137,19 @@ export default {
                 msg.content = event.content
               }
             } else if (event.type === 'step') {
+              const meta = getAgentStepMeta(event.content)
               commit('agent/ADD_STEP', {
-                id: `step-${Date.now()}`,
-                type: event.type,
+                id: `step-${Date.now()}-${state.messages.length}`,
+                type: meta.type,
+                title: meta.title,
                 content: event.content,
                 timestamp: Date.now()
               }, { root: true })
+            } else if (event.type === 'error') {
+              const msg = state.messages.find(m => m.id === assistantMsgId)
+              if (msg) {
+                msg.content = event.content || event.message || '抱歉，后端生成回复时遇到问题。'
+              }
             }
           },
           (error) => {
@@ -117,11 +157,13 @@ export default {
           },
           () => {
             commit('SET_LOADING', false)
+            commit('agent/SET_ACTIVE', false, { root: true })
           }
         )
       } catch (error) {
         console.error('Stream error:', error)
         commit('SET_LOADING', false)
+        commit('agent/SET_ACTIVE', false, { root: true })
       }
     },
 

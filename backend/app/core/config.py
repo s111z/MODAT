@@ -9,9 +9,10 @@ class Settings(BaseSettings):
     """应用配置"""
 
     # DeepSeek API配置
-    deepseek_api_key: str = "sk-c978cfc8da4c455287129de3bf1ba212"
+    deepseek_api_key: str = ""
     deepseek_api_base: str = "https://api.deepseek.com/v1"
     deepseek_model: str = "deepseek-chat"
+    deepseek_timeout: float = 180.0
 
     # 搜索引擎配置
     search_engine: str = "duckduckgo"
@@ -27,6 +28,8 @@ class Settings(BaseSettings):
     model_base_dir: str = "/root/modelparams"
     embedding_model_name: str = "Qwen3-Embedding-0.6B"
     embedding_device: str = "cuda"
+    vllm_gpu_memory_utilization: float = 0.70
+    vllm_max_model_len: int = 8192
 
     # 应用配置
     app_env: str = "development"

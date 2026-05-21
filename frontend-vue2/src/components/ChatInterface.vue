@@ -2,16 +2,36 @@
   <div class="chat-interface">
     <div class="right-header">
       <div class="agent-info">
-        <div class="agent-avatar"></div>
+        <div class="agent-avatar" aria-hidden="true">
+          <svg
+            class="scales-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M12 4V19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <path d="M8 19H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <path d="M6 7H18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <path d="M6 7L3.5 13H8.5L6 7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            <path d="M18 7L15.5 13H20.5L18 7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            <path d="M3.5 13C3.95 14.25 4.85 15 6 15C7.15 15 8.05 14.25 8.5 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            <path d="M15.5 13C15.95 14.25 16.85 15 18 15C19.15 15 20.05 14.25 20.5 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+        </div>
         <div class="agent-text">
           <div class="agent-name">Compliance Copilot</div>
-          <div class="agent-status">Ready</div>
+          <div class="agent-status">
+            <span class="status-dot"></span>
+            <span>您的AI助手已就绪</span>
+          </div>
         </div>
       </div>
       
       <div class="header-logo">
-        <span class="logo-text">mota</span>
-        <img src="@/assets/images/logo.png" alt="Mota" class="logo-icon" />
+        <span class="logo-text">MOTA</span>
+        <span class="logo-badge">
+          <img src="@/assets/images/logo.png" alt="Mota" class="logo-icon" />
+        </span>
       </div>
     </div>
     
@@ -24,7 +44,10 @@
             </div>
           </div>
 
-          <div v-else class="message assistant-message">
+          <div
+            v-else-if="hasAssistantVisibleContent(message)"
+            class="message assistant-message"
+          >
             <div class="message-bubble assistant-bubble">
               <AgentWorkflowInline
                 v-if="message.workflow && message.workflow.length > 0"
@@ -68,7 +91,7 @@
           icon="el-icon-paperclip"
           type="text"
           class="attach-btn"
-          @click="$refs.fileInput.click()"
+          @click="openChatFilePicker"
         ></el-button>
         <input
           ref="fileInput"
@@ -78,10 +101,12 @@
           @change="handleFileSelect"
         />
         <el-input
+          type="textarea"
           :value="input"
           @input="SET_INPUT($event)"
           placeholder="输入您的问题，或上传文档进行分析..."
-          @keyup.enter.native="handleSend"
+          :autosize="{ minRows: 1, maxRows: 8 }"
+          @keydown.enter.native.exact.prevent="handleSend"
           class="message-input"
         ></el-input>
         <el-button
@@ -115,7 +140,8 @@ export default {
   data() {
     return {
       uploadedFiles: [],
-      serverFilename: ''
+      serverFilename: '',
+      nextFileAction: 'chat'
     }
   },
   computed: {
@@ -135,53 +161,86 @@ export default {
       return id
     },
 
+    hasAssistantVisibleContent(message) {
+      return Boolean(
+        (message.content && message.content.trim()) ||
+        (message.workflow && message.workflow.length > 0)
+      )
+    },
+
+    openReviewFilePicker() {
+      this.nextFileAction = 'review'
+      if (this.$refs.fileInput) {
+        this.$refs.fileInput.click()
+      }
+    },
+
+    openChatFilePicker() {
+      this.nextFileAction = 'chat'
+      if (this.$refs.fileInput) {
+        this.$refs.fileInput.click()
+      }
+    },
+
     async handleFileSelect(e) {
       const files = e.target.files
       if (files && files.length > 0) {
         const file = files[0]
         const defaultReviewMessage = '请审核这份方案'
+        const shouldStartReview = this.nextFileAction === 'review'
 
         if (mockService.isEnabled()) {
-          // Mock 模式：不上传，直接本地记录文件并切换模式
-          this.uploadedFiles.push(file)
+          this.uploadedFiles = [file]
           this.serverFilename = file.name
-          this.$store.commit('SET_TASK_MODE', 'document-review')
-          this.$store.commit('SET_REVIEW_PHASE', 'document')
-          this.$message.success('文件已选择，开始自动审核')
+          if (shouldStartReview) {
+            this.$store.commit('SET_TASK_MODE', 'document-review')
+            this.$store.commit('SET_REVIEW_PHASE', 'document')
+            this.$message.success('文件已选择，开始自动审核')
+            e.target.value = ''
+            await this.startReview(defaultReviewMessage, { autoAddUserMessage: true })
+          } else {
+            this.$store.commit('SET_TASK_MODE', 'qa')
+            this.$message.success('文件已选择，请输入你的问题后发送')
+          }
           e.target.value = ''
-          await this.startReview(defaultReviewMessage, { autoAddUserMessage: true })
+          this.nextFileAction = 'chat'
           return
         }
 
         try {
-          // 上传文件到后端
           this.SET_LOADING(true)
           const uploadResponse = await api.uploadFile(file)
 
-          this.uploadedFiles.push(file)
+          this.uploadedFiles = [file]
           this.serverFilename = uploadResponse.savefilename
 
-          // 切换到文档审核模式
-          this.$store.commit('SET_TASK_MODE', 'document-review')
-          this.$store.commit('SET_REVIEW_PHASE', 'document')
-
-          this.$message.success('文件上传成功，开始自动审核')
-          this.SET_LOADING(false)
-          await this.$nextTick()
-          await this.startReview(defaultReviewMessage, { autoAddUserMessage: true })
+          if (shouldStartReview) {
+            this.$store.commit('SET_TASK_MODE', 'document-review')
+            this.$store.commit('SET_REVIEW_PHASE', 'document')
+            this.$message.success('文件上传成功，开始自动审核')
+            this.SET_LOADING(false)
+            await this.$nextTick()
+            await this.startReview(defaultReviewMessage, { autoAddUserMessage: true })
+          } else {
+            this.$store.commit('SET_TASK_MODE', 'qa')
+            this.$message.success('文件上传成功，请输入你的问题后发送')
+          }
         } catch (error) {
           console.error('文件上传或审核失败:', error)
           this.$message.error('文件上传或审核失败: ' + error.message)
         } finally {
           this.SET_LOADING(false)
-          // 清空文件输入
           e.target.value = ''
+          this.nextFileAction = 'chat'
         }
       }
     },
 
     removeFile(index) {
       this.uploadedFiles.splice(index, 1)
+      if (this.uploadedFiles.length === 0) {
+        this.serverFilename = ''
+      }
     },
 
     async handleSend() {
@@ -209,7 +268,13 @@ export default {
           await this.triggerKnowledgeQA(query)
         } else {
           // 知识问答 → 调用 /api/chat/stream（降级到 /api/chat）
-          await this.sendMessageStream({ message: query, mode: 'qa' })
+          await this.sendMessageStream({
+            message: query,
+            mode: 'qa',
+            filename: this.serverFilename || undefined
+          })
+          this.uploadedFiles = []
+          this.serverFilename = ''
         }
       } catch (error) {
         console.error('API失败:', error)
@@ -217,12 +282,18 @@ export default {
         if (!mockService.isEnabled() && !(taskMode === 'document-review' && this.serverFilename)) {
           try {
             // 流式失败降级到普通 /api/chat
-            const response = await api.chat({ message: query, mode: 'qa' })
+            const response = await api.chat({
+              message: query,
+              mode: 'qa',
+              filename: this.serverFilename || undefined
+            })
             this.ADD_MESSAGE({
               id: (Date.now() + 1).toString(),
               role: 'assistant',
               content: response.response || '未获取到回复'
             })
+            this.uploadedFiles = []
+            this.serverFilename = ''
             this.SET_LOADING(false)
           } catch (fallbackError) {
             console.error('普通API也失败:', fallbackError)
@@ -655,49 +726,172 @@ export default {
 
 /* 顶部 Header */
 .right-header {
-  height: 60px;
+  height: 68px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 24px;
-  background: rgba(255, 255, 255, 0.2);
+  padding: 0 32px;
+  background: linear-gradient(180deg, #FDFBF9 0%, #FAF7F2 100%);
   backdrop-filter: blur(10px);
+  border-bottom: 1px solid #F1E7D8;
 }
 
 .agent-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .agent-avatar {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 40px;
+  color: #6B4423;
+  background: #F3EFE9;
+  border-radius: 12px;
+  border: 1px solid rgba(107, 68, 35, 0.08);
+}
+
+.scales-icon {
   width: 24px;
   height: 24px;
-  background: #a5b4fc;
-  border-radius: 50%;
-  border: 1px solid white;
+}
+
+.agent-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .agent-name {
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: #3C2F2F;
 }
 
 .agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-size: 12px;
-  color: #999;
+  color: #8B7E74;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  position: relative;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #8B5E34;
+}
+
+.status-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(139, 94, 52, 0.28);
+  animation: statusPing 2.4s ease-out infinite;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  line-height: 1;
 }
 
 .logo-text {
   font-size: 24px;
-  font-weight: 900; /* 图1是非常粗的黑体 */
-  color: #000;
-  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-family: 'Times New Roman', 'PingFang SC', 'Microsoft YaHei', serif;
+  letter-spacing: 2px;
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(
+    110deg,
+    #4a3a32 0%,
+    #4a3a32 44%,
+    rgba(255, 255, 255, 0.88) 49%,
+    #4a3a32 54%,
+    #4a3a32 100%
+  );
+  background-size: 360% 100%;
+  background-position: 210% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: logoShimmer 18s linear infinite;
+}
+
+.logo-badge {
+  width: 48px;
+  height: 48px;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7efe4;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: 0 0 48px;
 }
 
 .logo-icon {
-  width: 28px;
+  width: 36px;
+  height: 36px;
+  display: block;
+  object-fit: contain;
+  position: relative;
+  top: 0;
+  transform-origin: 50% 80%;
+  animation: otterBounce 18s ease-in-out infinite;
+}
+
+@keyframes logoShimmer {
+  0%, 42% {
+    background-position: 210% 0;
+  }
+  88% {
+    background-position: -150% 0;
+  }
+  88.01%, 100% {
+    background-position: 210% 0;
+  }
+}
+
+@keyframes otterBounce {
+  0%, 66%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  74% {
+    transform: translateY(-6px) scale(1.04);
+  }
+  79% {
+    transform: translateY(0) scale(0.98);
+  }
+  84% {
+    transform: translateY(-3px) scale(1.02);
+  }
+  88% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes statusPing {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  80%, 100% {
+    opacity: 0;
+    transform: scale(3);
+  }
 }
 
 /* 消息容器 */
@@ -710,7 +904,7 @@ export default {
 .messages-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .message {
@@ -722,24 +916,27 @@ export default {
   justify-content: flex-end;
 }
 
-/* 用户气泡：高亮橙色 */
+/* 用户气泡：深棕色 */
 .user-bubble {
-  background-color: #f2994a !important;
+  background-color: #B8733E !important;
   color: white !important;
-  padding: 10px 20px;
-  border-radius: 15px 15px 4px 15px; /* 对齐图1的非对称圆角 */
+  padding: 16px;
+  border-radius: 12px;
   font-size: 14px;
-  box-shadow: 0 4px 10px rgba(242, 153, 74, 0.2);
+  line-height: 1.6;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.10);
 }
 
-/* 助手气泡：超大奶油色面板 */
+/* 助手气泡：极浅米白色 */
 .assistant-bubble {
-  background-color: #fcf3e8 !important; /* 图1的标准奶粉色 */
+  background-color: #FFF9F0 !important;
   border-radius: 12px;
-  padding: 24px;
+  padding: 16px;
   width: 100%; /* 助手回复通常占据横向大部分空间 */
   color: #333;
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.05);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .loading-bubble {
@@ -787,23 +984,49 @@ export default {
 }
 
 .input-wrapper {
-  background: #fff;
-  border-radius: 30px;
+  background: #F8EBDD;
+  border-radius: 999px;
   display: flex;
-  align-items: center;
-  padding: 4px 6px 4px 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  border: 1px solid #eee;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px 10px 16px;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.05);
+  border: 1px solid #E8D5C4;
+  transition: box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-.message-input >>> .el-input__inner {
+.message-input {
+  flex: 1;
+}
+
+.message-input >>> .el-textarea__inner {
   border: none !important;
   background: transparent !important;
+  resize: none;
+  min-height: 40px !important;
+  max-height: 200px;
+  padding: 9px 4px;
+  box-shadow: none !important;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #4a3a28;
+  overflow-y: auto;
+}
+
+.message-input >>> .el-textarea__inner::placeholder {
+  color: #b8aa9b;
 }
 
 .attach-btn {
   font-size: 20px;
-  color: #999;
+  color: #9d8d7f;
+  height: 40px;
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.attach-btn:hover {
+  color: #B8733E;
 }
 
 .send-btn {
@@ -811,6 +1034,15 @@ export default {
   border-color: #f2994a !important;
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.send-btn:hover:not(.is-disabled) {
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(184, 115, 62, 0.22);
+  background-color: #E88935 !important;
+  border-color: #E88935 !important;
 }
 
 .input-hint {
@@ -822,8 +1054,8 @@ export default {
 
 /* Markdown 字体适配图1 */
 .markdown-body {
-  font-size: 15px;
-  line-height: 1.8;
+  font-size: 14px;
+  line-height: 1.6;
   color: #444;
 }
 
@@ -837,8 +1069,8 @@ export default {
   backdrop-filter: blur(5px);
   border-radius: 12px;
   margin-bottom: 8px; /* 与输入框保持距离 */
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.03); /* 向上微弱阴影 */
+  border: 1px solid #E8D5C4;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.05);
   max-height: 120px;
   overflow-y: auto;
   width: fit-content;
@@ -851,8 +1083,8 @@ export default {
   gap: 6px;
   background: #fff;
   padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid #f2994a; /* 匹配你主题的橙色边框 */
+  border-radius: 12px;
+  border: 1px solid #E8D5C4;
   font-size: 13px;
   color: #333;
   animation: slideInUp 0.3s ease;

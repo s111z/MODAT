@@ -10,6 +10,7 @@ node_modules/
 backend/.venv
 backend/.venv311
 backend/.python-version
+backend/.env
 backend/models
 
 __pycache__/

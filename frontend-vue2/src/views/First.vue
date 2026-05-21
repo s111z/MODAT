@@ -11,8 +11,7 @@
       
       <img src="@/assets/images/title.png" class="main-title"/>
       <div class="button-container">
-        <div class="btn" @click="navigateTo('/content')">方案审核</div>
-        <div class="btn" @click="navigateTo('/single')">智能问询</div>
+        <div class="btn" @click="navigateTo('/content')">进入 mota</div>
       </div>
     </div>
   </div>
@@ -36,7 +35,7 @@ export default {
 .mota-container {
   width: 100%;
   height: 100vh;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: 'Times New Roman', 'PingFang SC', 'Microsoft YaHei', serif;
   background-image: url('@/assets/images/first_backgroud.png');
   background-size: cover;
   background-position: center;
@@ -107,7 +106,6 @@ export default {
 /* 4. 按钮容器：紧贴标题下方 */
 .button-container {
   display: flex;
-  gap: 30px; /* 按钮间距 */
   margin-top: 40px;
   margin-bottom: 40px; /* 让底部的叶片/微笑能微微嵌入按钮下方 */
   z-index: 2; 

@@ -2,10 +2,55 @@ import chromadb
 import uuid
 import logging
 from typing import List, Dict, Optional, Any
-# from chromadb.utils import embedding_functions
-from .embedding_function import VLLMEmbeddingFunction
 
 _logger = logging.getLogger("vector_store")
+
+
+def _create_embedding_function(settings):
+    """Create the configured ChromaDB embedding function."""
+    embedding_type = settings.embedding_model_type.lower()
+
+    if embedding_type in {"sentence-transformers", "sentence_transformers", "st"}:
+        from .sentence_embedding_function import create_embedding_function
+
+        _logger.info(
+            "[ChromaDB] 使用 SentenceTransformers Embedding: %s (%s)",
+            settings.embedding_model_name,
+            settings.embedding_device,
+        )
+        return create_embedding_function(
+            model_key=settings.embedding_model_name,
+            device=settings.embedding_device,
+        )
+
+    if embedding_type == "default":
+        from chromadb.utils import embedding_functions
+
+        _logger.warning("[ChromaDB] 使用默认 Embedding 模型，对中文支持一般")
+        return embedding_functions.DefaultEmbeddingFunction()
+
+    if embedding_type == "openai":
+        import os
+        from chromadb.utils import embedding_functions
+
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("使用 OpenAI embedding 需要设置 OPENAI_API_KEY 环境变量")
+        return embedding_functions.OpenAIEmbeddingFunction(
+            api_key=api_key,
+            model_name=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+        )
+
+    from .embedding_function import VLLMEmbeddingFunction
+    import os
+
+    model_path = os.path.join(settings.model_base_dir, settings.embedding_model_name)
+    _logger.info("[ChromaDB] 使用 vLLM Embedding 模型: %s", model_path)
+    return VLLMEmbeddingFunction(
+        model_name_or_path=settings.embedding_model_name,
+        device=settings.embedding_device,
+    )
+
 
 class VectorDBManager:
     def __init__(self, db_path: str = "./chroma_db", collection_name: str = "mota_knowledge"):
@@ -17,15 +62,9 @@ class VectorDBManager:
         # 1. 初始化持久化客户端
         self.client = chromadb.PersistentClient(path=db_path)
 
-        # 2. 设置嵌入模型，使用配置中的本地路径
-        import os
+        # 2. 设置嵌入模型
         from .config import settings
-        model_path = os.path.join(settings.model_base_dir, settings.embedding_model_name)
-        _logger.info("[ChromaDB] 使用 Embedding 模型: %s", model_path)
-        self.embedding_fn = VLLMEmbeddingFunction(
-            model_name_or_path=model_path,
-            device=settings.embedding_device,
-        )
+        self.embedding_fn = _create_embedding_function(settings)
 
         # 3. 获取或创建集合
         self.collection = self.client.get_or_create_collection(
