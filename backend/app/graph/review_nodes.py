@@ -83,6 +83,55 @@ def _log_text_chunks(label: str, text: str, chunk_size: int = 600, max_chunks: i
         logger.info("[Review]   %s剩余 %d 个片段已省略，完整内容将在文档预览/报告区展示", label, len(chunks) - max_chunks)
 
 
+def _extract_risk_hints(doc_text: str) -> list:
+    hints = []
+    rules = [
+        ("人员外包/派遣", ["外包", "派遣", "人力资源公司", "直接用工"], "核查是否涉及核心岗位人员分包或规避直接雇佣责任。"),
+        ("劳动与社保", ["社保", "工会", "劳动合同", "劳动法"], "核查劳动合同、社保缴纳、工会沟通和雇主责任是否完整。"),
+        ("利润分配", ["利润分配", "PTU", "Artículo 117", "117"], "核查墨西哥利润分配义务及新企业豁免条件是否被正确适用。"),
+        ("第三方服务", ["设备维护", "废物处理", "物流运输", "专业服务"], "区分核心生产岗位与可外包的专业服务，保留供应商资质与合同边界。"),
+    ]
+    for title, keywords, suggestion in rules:
+        if any(keyword in doc_text for keyword in keywords):
+            hints.append({"title": title, "suggestion": suggestion})
+    return hints or [{"title": "文档合规性", "suggestion": "围绕主体资质、合同边界、法律依据和执行留痕进行复核。"}]
+
+
+def _fallback_rewrite_suggestions(state: ReviewState) -> str:
+    doc_text = state.get("doc_text", "")
+    hints = _extract_risk_hints(doc_text)
+    lines = [
+        "1. 将核心岗位、生产管理岗位与可外包的专业服务分开描述，避免把核心业务人员直接包装为外包服务。",
+        "2. 对每一项外包安排补充法律依据、供应商资质、服务边界、验收标准和责任承担方式。",
+        "3. 对涉及劳动合同、社保、工会沟通、利润分配等事项增加本地律师复核节点和证据留痕要求。",
+    ]
+    for index, hint in enumerate(hints, 4):
+        lines.append(f"{index}. 针对“{hint['title']}”：{hint['suggestion']}")
+    return "\n".join(lines)
+
+
+def _fallback_review_report(state: ReviewState) -> str:
+    doc_info = state.get("doc_info", {})
+    doc_text = state.get("doc_text", "")
+    hints = _extract_risk_hints(doc_text)
+    risk_lines = "\n".join(
+        f"- {hint['title']}：{hint['suggestion']}"
+        for hint in hints
+    )
+    suggestions = state.get("rewrite_suggestions") or _fallback_rewrite_suggestions(state)
+    return f"""## 1. 审核概要
+已读取并解析文档《{doc_info.get('filename', '上传方案')}》，提取文本约 {len(doc_text)} 字。本报告基于当前文档内容生成，用于帮助用户进行初步合规判断。
+
+## 2. 主要风险点
+{risk_lines}
+
+## 3. 修改建议
+{suggestions}
+
+## 4. 审核结论
+该方案已经完成文档解析与流程化审核。由于当前模型/检索服务可能未返回完整外部依据，建议将以上风险点作为人工复核清单，并补充当地法律依据、合同条款和执行证据后再进入正式审批。"""
+
+
 # ===== 节点函数 =====
 
 def node_desensitize(state: ReviewState) -> Dict[str, Any]:
@@ -351,6 +400,9 @@ def node_generate_review(state: ReviewState) -> Dict[str, Any]:
         review_findings=state.get("resolved_context", ""),
     )
     state["rewrite_suggestions"] = rewrite_result.get("suggestions", "")
+    if not rewrite_result.get("success") or not state["rewrite_suggestions"].strip():
+        logger.info("[Review]   方案优化模型结果为空，启用基于文档内容的兜底优化建议")
+        state["rewrite_suggestions"] = _fallback_rewrite_suggestions(state)
     logger.info("[Review]   方案优化建议生成完成，长度=%d，success=%s", len(state["rewrite_suggestions"]), rewrite_result.get("success"))
     _log_text_chunks("优化建议", state["rewrite_suggestions"], chunk_size=500, max_chunks=8)
 
@@ -368,6 +420,13 @@ def node_generate_review(state: ReviewState) -> Dict[str, Any]:
     )
 
     review_report = result.get("review_report", "审核报告生成失败")
+    if (
+        not result.get("success")
+        or not review_report.strip()
+        or "审核报告生成失败" in review_report
+    ):
+        logger.info("[Review]   审核报告模型结果不可用，启用基于文档内容的兜底审核报告")
+        review_report = _fallback_review_report(state)
     logger.info("[Review]   审核报告模型输出完成，长度=%d，success=%s", len(review_report), result.get("success"))
     _log_text_chunks("审核报告", review_report, chunk_size=700, max_chunks=10)
 

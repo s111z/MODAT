@@ -143,18 +143,8 @@ def _build_chat_query(request: ChatRequest) -> str:
     if not request.filename:
         return request.message
 
-    filepath = os.path.join(UpadateFilePath, request.filename)
-    if not os.path.exists(filepath):
-        raise HTTPException(status_code=404, detail=f"文件不存在: {request.filename}")
-
-    from agents.doc_parser_agent import DocParserAgent
-
-    parsed = DocParserAgent().parse(filepath)
-    doc_text = (parsed.get("text") or "").strip()
-    if not doc_text:
-        raise HTTPException(status_code=400, detail="上传文档未解析出可分析文本")
-
-    doc_text = doc_text[:12000]
+    parsed = _parse_uploaded_document(request.filename)
+    doc_text = (parsed.get("text") or "").strip()[:12000]
     _chat_logger.info(
         "普通问答已附加上传文档内容: filename=%s chars=%s",
         request.filename,
@@ -166,6 +156,81 @@ def _build_chat_query(request: ChatRequest) -> str:
         f"【文档内容】\n{doc_text}\n\n"
         f"【用户问题】\n{request.message}"
     )
+
+
+def _parse_uploaded_document(filename: str) -> Dict[str, Any]:
+    """读取用户通过 Chatbot 回形针上传的文件。"""
+    filepath = os.path.join(UpadateFilePath, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail=f"文件不存在: {filename}")
+
+    from agents.doc_parser_agent import DocParserAgent
+
+    parsed = DocParserAgent().parse(filepath)
+    doc_text = (parsed.get("text") or "").strip()
+    if not doc_text:
+        raise HTTPException(status_code=400, detail="上传文档未解析出可分析文本")
+    return parsed
+
+
+def _build_document_chat_fallback(parsed: Dict[str, Any], message: str) -> str:
+    """LLM 不可用时，仍给 Chatbot 一个基于文档文本的初步分析。"""
+    doc_text = (parsed.get("text") or "").strip()
+    paragraphs = [p.strip() for p in doc_text.splitlines() if p.strip()]
+    excerpt = "\n".join(paragraphs[:8])[:1200] or "文档已上传，但可提取文本较少。"
+    risk_keywords = ["风险", "非法", "不合规", "禁止", "规避", "外包", "社保", "工会", "利润分配", "劳动法"]
+    matched = [kw for kw in risk_keywords if kw in doc_text]
+    risk_line = "、".join(matched[:8]) if matched else "暂未通过关键词发现明显风险词"
+    return (
+        f"我已经读取到文档《{parsed.get('filename', '上传文档')}》，共约 {len(doc_text)} 个字符。\n\n"
+        f"你问的是：{message}\n\n"
+        "初步内容摘要：\n"
+        f"{excerpt}\n\n"
+        "初步风险线索：\n"
+        f"{risk_line}\n\n"
+        "建议下一步：如果你需要正式合规结论，请在回形针菜单选择“方案审核”，系统会进入左侧审核工作流；"
+        "如果只是继续问答，可以直接追问具体条款、风险点或修改建议。"
+    )
+
+
+async def _answer_uploaded_document(request: ChatRequest, sid: str) -> Dict[str, Any]:
+    """普通文件解析模式：强制基于上传文档回答，不走意图识别/知识库工作流。"""
+    parsed = _parse_uploaded_document(request.filename)
+    doc_text = (parsed.get("text") or "").strip()[:14000]
+    steps = [
+        f"读取上传文档：{parsed.get('filename', request.filename)}",
+        f"提取到可分析文本 {len(parsed.get('text') or '')} 字",
+        "基于文档内容生成回复",
+    ]
+    try:
+        from core.llm import deepseek_client
+
+        response_text = await asyncio.to_thread(
+            deepseek_client.generate_response,
+            prompt=request.message,
+            context=(
+                f"文件名：{parsed.get('filename', request.filename)}\n"
+                f"文件类型：{parsed.get('file_type', '')}\n"
+                f"文档内容：\n{doc_text}"
+            ),
+            system_message=(
+                "你是专业的文档阅读与合规分析助手。用户已经上传了文档，"
+                "必须基于提供的文档内容回答，不要声称没有看到文档。"
+                "请先总结核心内容，再回答用户问题，并给出可执行的下一步建议。"
+            ),
+        )
+    except Exception as exc:
+        _chat_logger.warning("上传文档问答模型调用失败，使用本地兜底分析: %s", exc)
+        response_text = _build_document_chat_fallback(parsed, request.message)
+        steps.append("模型暂不可用，已生成本地兜底分析")
+
+    session_store.add_message(sid, "user", request.message)
+    session_store.add_message(sid, "assistant", response_text)
+    return {
+        "response": response_text,
+        "steps": steps + ["回复生成完成"],
+        "session_id": sid,
+    }
 
 
 def _format_value(value: Any) -> str:
@@ -443,6 +508,14 @@ async def chat(request: ChatRequest):
         # 获取对话历史
         history = session_store.build_context(sid)
 
+        if request.filename:
+            result = await _answer_uploaded_document(request, sid)
+            return ChatResponse(
+                response=result["response"],
+                steps=result["steps"],
+                session_id=sid,
+            )
+
         query = _build_chat_query(request)
 
         # 初始化QA工作流状态
@@ -517,6 +590,21 @@ async def chat_stream(request: ChatRequest):
             # 发送session_id
             meta = json.dumps({"type": "meta", "session_id": sid}, ensure_ascii=False)
             yield f"data: {meta}\n\n"
+
+            if request.filename:
+                result = await _answer_uploaded_document(request, sid)
+                for step in result.get("steps", []):
+                    data = json.dumps({"type": "step", "content": step}, ensure_ascii=False)
+                    yield f"data: {data}\n\n"
+                    await asyncio.sleep(0.1)
+                response_data = json.dumps({
+                    "type": "response",
+                    "content": result["response"],
+                    "steps": result.get("steps", []),
+                    "session_id": sid,
+                }, ensure_ascii=False)
+                yield f"data: {response_data}\n\n"
+                return
 
             # 执行工作流
             workflow = create_qa_workflow()

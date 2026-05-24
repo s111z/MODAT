@@ -87,12 +87,26 @@
         </div>
       </div>
       <div class="input-wrapper">
-        <el-button
-          icon="el-icon-paperclip"
-          type="text"
-          class="attach-btn"
-          @click="openChatFilePicker"
-        ></el-button>
+        <div class="attach-menu-wrap">
+          <el-button
+            icon="el-icon-paperclip"
+            type="text"
+            class="attach-btn"
+            @click.stop="toggleAttachMenu"
+          ></el-button>
+          <transition name="attach-menu">
+            <div v-if="attachMenuVisible" class="attach-menu" @click.stop>
+              <button class="attach-menu-item" type="button" @click="chooseChatUpload">
+                <i class="el-icon-document"></i>
+                <span>文件解析</span>
+              </button>
+              <button class="attach-menu-item" type="button" @click="chooseReviewUpload">
+                <i class="el-icon-document-checked"></i>
+                <span>方案审核</span>
+              </button>
+            </div>
+          </transition>
+        </div>
         <input
           ref="fileInput"
           type="file"
@@ -141,7 +155,8 @@ export default {
     return {
       uploadedFiles: [],
       serverFilename: '',
-      nextFileAction: 'chat'
+      nextFileAction: 'chat',
+      attachMenuVisible: false
     }
   },
   computed: {
@@ -168,8 +183,29 @@ export default {
       )
     },
 
+    toggleAttachMenu() {
+      this.attachMenuVisible = !this.attachMenuVisible
+    },
+
+    closeAttachMenu() {
+      this.attachMenuVisible = false
+    },
+
+    chooseChatUpload() {
+      this.closeAttachMenu()
+      this.openChatFilePicker()
+    },
+
+    chooseReviewUpload() {
+      this.closeAttachMenu()
+      this.openReviewFilePicker()
+    },
+
     openReviewFilePicker() {
       this.nextFileAction = 'review'
+      this.$store.commit('SET_SIDEBAR_ACTIVE', 'chat')
+      this.$store.commit('SET_TASK_MODE', 'document-review')
+      this.$store.commit('SET_REVIEW_PHASE', 'document')
       if (this.$refs.fileInput) {
         this.$refs.fileInput.click()
       }
@@ -711,6 +747,10 @@ export default {
   mounted() {
     // Mock 数据已准备好，等待用户手动触发
     // 不再自动加载示例对话
+    document.addEventListener('click', this.closeAttachMenu)
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.closeAttachMenu)
   }
 }
 </script>
@@ -992,6 +1032,7 @@ export default {
   padding: 10px 12px 10px 16px;
   box-shadow: 0 4px 12px rgba(139, 69, 19, 0.05);
   border: 1px solid #E8D5C4;
+  position: relative;
   transition: box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
@@ -1027,6 +1068,78 @@ export default {
 
 .attach-btn:hover {
   color: #B8733E;
+}
+
+.attach-menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.attach-menu {
+  position: absolute;
+  left: -8px;
+  bottom: calc(100% + 14px);
+  width: 132px;
+  padding: 8px;
+  background: #FFF9F0;
+  border: 1px solid #E8D5C4;
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(107, 68, 35, 0.14);
+  z-index: 20;
+}
+
+.attach-menu::after {
+  content: '';
+  position: absolute;
+  left: 22px;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  background: #FFF9F0;
+  border-right: 1px solid #E8D5C4;
+  border-bottom: 1px solid #E8D5C4;
+  transform: rotate(45deg);
+}
+
+.attach-menu-item {
+  width: 100%;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #4A3A32;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.attach-menu-item i {
+  color: #6B4423;
+  font-size: 16px;
+}
+
+.attach-menu-item:hover {
+  background: linear-gradient(90deg, #F6E9D8 0%, #FFF7EC 100%);
+  color: #6B4423;
+  transform: translateX(3px);
+}
+
+.attach-menu-enter-active,
+.attach-menu-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.attach-menu-enter,
+.attach-menu-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
 }
 
 .send-btn {

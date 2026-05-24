@@ -34,16 +34,6 @@
         >
           <img src="@/assets/images/side4.png" class="sidebar-icon" alt="chat" />
         </div>
-
-        <!-- 方案审核图标 -->
-        <div
-          @click="setSidebar('review')"
-          :class="['sidebar-btn', { active: sidebarActive === 'review' }]"
-          title="方案审核"
-          aria-label="方案审核"
-        >
-          <i class="el-icon-document-checked sidebar-el-icon"></i>
-        </div>
       </div>
     </div>
 
@@ -66,12 +56,6 @@
           <!-- 文档审核模式显示 DocumentReviewPanel -->
           <DocumentReviewPanel v-else @request-review-upload="triggerReviewUpload" />
         </template>
-
-        <!-- 方案审核 -->
-        <DocumentReviewPanel
-          v-else-if="sidebarActive === 'review'"
-          @request-review-upload="triggerReviewUpload"
-        />
 
         <!-- 历史列表 -->
         <HistoryList v-else-if="sidebarActive === 'history'" />
@@ -142,10 +126,6 @@ export default {
         this.$store.commit('SET_REVIEW_PHASE', 'document')
         this.workflowSteps = []
       }
-      if (panel === 'review') {
-        this.$store.commit('SET_TASK_MODE', 'document-review')
-        this.$store.commit('SET_REVIEW_PHASE', 'document')
-      }
       // 切换到非知识库模式时清空选中文件
       if (panel !== 'knowledge') {
         this.selectedFile = null
@@ -157,7 +137,7 @@ export default {
     },
 
     triggerReviewUpload() {
-      this.SET_SIDEBAR_ACTIVE('review')
+      this.SET_SIDEBAR_ACTIVE('chat')
       this.$store.commit('SET_TASK_MODE', 'document-review')
       this.$store.commit('SET_REVIEW_PHASE', 'document')
       this.selectedFile = null
